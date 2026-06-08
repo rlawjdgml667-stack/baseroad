@@ -3,9 +3,10 @@ import { supabase } from "../../lib/supabase";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
 
-const LEVEL_LABEL = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
+const LEVEL_LABEL = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 const POSITION_LIST = ["투수","포수","내야수","외야수"];
 const REGION_LIST = ["서울","경기","인천","강원","충청","전라","경상","제주"];
+const ROLE_LABEL = { parent:"학부모", player:"선수", coach:"감독·코치", admin:"관리자" };
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -14,18 +15,22 @@ export default function AdminDashboard() {
   const [schools, setSchools] = useState([]);
   const [players, setPlayers] = useState([]);
   const [allProfiles, setAllProfiles] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [memberSearch, setMemberSearch] = useState("");
 
   useEffect(() => {
     Promise.all([
       supabase.from("profiles").select("*").eq("role","coach").eq("status","pending"),
       supabase.from("schools").select("id,name,region,level,status,created_at"),
       supabase.from("players").select("id,name,position,status,created_at,schools(name)"),
-      supabase.from("profiles").select("id,role,status,created_at"),
-    ]).then(([c,s,p,pr]) => {
+      supabase.from("profiles").select("*").order("created_at",{ascending:false}),
+      supabase.from("qna").select("*, profiles(name)").order("created_at",{ascending:false}),
+    ]).then(([c,s,p,pr,qna]) => {
       setPendingCoaches(c.data||[]);
       setSchools(s.data||[]);
       setPlayers(p.data||[]);
       setAllProfiles(pr.data||[]);
+      setPosts(qna.data||[]);
       setLoading(false);
     });
   }, []);
@@ -56,6 +61,26 @@ export default function AdminDashboard() {
     toast.success("선수가 삭제됐습니다");
   }
 
+  async function deletePost(id) {
+    if (!confirm("게시글을 삭제하시겠습니까?")) return;
+    await supabase.from("qna").delete().eq("id", id);
+    setPosts(prev => prev.filter(p => p.id !== id));
+    toast.success("게시글이 삭제됐습니다");
+  }
+
+  async function changeRole(id, role) {
+    await supabase.from("profiles").update({ role }).eq("id", id);
+    setAllProfiles(prev => prev.map(p => p.id === id ? { ...p, role } : p));
+    toast.success("역할이 변경됐습니다");
+  }
+
+  async function toggleMemberStatus(id, currentStatus) {
+    const newStatus = currentStatus === "active" ? "suspended" : "active";
+    await supabase.from("profiles").update({ status: newStatus }).eq("id", id);
+    setAllProfiles(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+    toast.success(newStatus === "suspended" ? "계정이 정지됐습니다" : "계정이 활성화됐습니다");
+  }
+
   if (loading) return <LoadingSpinner />;
 
   // 통계 계산
@@ -82,7 +107,13 @@ export default function AdminDashboard() {
     ["pending","승인 대기 ("+pendingCoaches.length+")"],
     ["schools","학교 관리 ("+schools.length+")"],
     ["players","선수 관리 ("+players.length+")"],
+    ["community","커뮤니티 관리"],
+    ["members","회원 관리"],
   ];
+
+  const filteredMembers = allProfiles.filter(p =>
+    !memberSearch || p.name?.includes(memberSearch) || p.email?.includes(memberSearch)
+  );
 
   function SimpleBar({ value, max, color }) {
     const pct = max > 0 ? Math.round((value/max)*100) : 0;
@@ -254,6 +285,69 @@ export default function AdminDashboard() {
               <button onClick={() => deletePlayer(p.id)} className="text-xs text-red-400 font-bold hover:text-red-600">삭제</button>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === "community" && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400">커뮤니티 게시글을 관리합니다. 부적절한 글을 삭제할 수 있습니다.</p>
+          {posts.length === 0 && <div className="card p-8 text-center text-gray-400">게시글이 없습니다</div>}
+          {posts.map(post => (
+            <div key={post.id} className="card p-3 flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  {post.category && <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">{post.category}</span>}
+                  <span className="text-xs text-gray-400">{post.profiles?.name||"익명"}</span>
+                  <span className="text-xs text-gray-300">{new Date(post.created_at).toLocaleDateString("ko")}</span>
+                </div>
+                <p className="text-sm font-semibold truncate">{post.title || post.question}</p>
+                {post.title && <p className="text-xs text-gray-400 truncate mt-0.5">{post.question}</p>}
+              </div>
+              <button onClick={() => deletePost(post.id)} className="text-xs text-red-400 font-bold hover:text-red-600 flex-shrink-0">삭제</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "members" && (
+        <div className="space-y-3">
+          <input className="input" placeholder="이름 또는 이메일 검색..." value={memberSearch} onChange={e => setMemberSearch(e.target.value)} />
+          <p className="text-xs text-gray-400">총 {filteredMembers.length}명</p>
+          <div className="space-y-2">
+            {filteredMembers.map(m => (
+              <div key={m.id} className="card p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-navy/10 flex items-center justify-center text-xs font-bold text-navy/40 flex-shrink-0">
+                    {m.name?.[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-sm">{m.name}</span>
+                      <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded-full " + (m.status==="suspended" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700")}>{m.status==="suspended"?"정지":"활성"}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 truncate">{m.email}</div>
+                  </div>
+                  <span className={"text-[10px] font-bold px-2 py-1 rounded-full " + (m.role==="admin"?"bg-red-100 text-red-700":m.role==="coach"?"bg-orange-100 text-orange-700":m.role==="player"?"bg-green-100 text-green-700":"bg-blue-100 text-blue-700")}>
+                    {ROLE_LABEL[m.role]||m.role}
+                  </span>
+                </div>
+                {m.role !== "admin" && (
+                  <div className="flex gap-2">
+                    <select className="input text-xs py-1 flex-1" value={m.role} onChange={e => changeRole(m.id, e.target.value)}>
+                      <option value="parent">학부모</option>
+                      <option value="player">선수</option>
+                      <option value="coach">감독·코치</option>
+                      <option value="admin">관리자</option>
+                    </select>
+                    <button onClick={() => toggleMemberStatus(m.id, m.status)}
+                      className={"text-xs font-bold px-3 py-1 rounded-lg border transition " + (m.status==="suspended" ? "bg-green-50 text-green-600 border-green-200" : "bg-red-50 text-red-500 border-red-200")}>
+                      {m.status==="suspended" ? "활성화" : "정지"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
