@@ -87,6 +87,16 @@ export default function CoachDashboard() {
     // 연결 승인: status → approved, players.school_id 업데이트
     await supabase.from("school_connection_requests").update({ status: "approved" }).eq("id", req.id);
     await supabase.from("players").update({ school_id: school.id }).eq("id", req.player_id);
+    // 선수에게 알림
+    const { data: pl } = await supabase.from("players").select("user_id").eq("id", req.player_id).single();
+    if (pl?.user_id) {
+      await supabase.from("notifications").insert({
+        user_id: pl.user_id,
+        type: "connection_approved",
+        message: `${school.name}에 연결이 승인됐습니다! 🎉 이제 학교 페이지에 등록됩니다.`,
+        link: "/dashboard/player",
+      });
+    }
     setConnectionRequests(prev => prev.filter(r => r.id !== req.id));
     setMyPlayers(prev => [...prev, { id: req.players.id, name: req.players.name, position: req.players.position, profile_image_url: req.players.profile_image_url, stats_verified: false }]);
     setStats(s => ({ ...s, players: s.players + 1 }));
@@ -95,6 +105,16 @@ export default function CoachDashboard() {
 
   async function rejectConnection(req) {
     await supabase.from("school_connection_requests").update({ status: "rejected" }).eq("id", req.id);
+    // 선수에게 거절 알림
+    const { data: pl } = await supabase.from("players").select("user_id").eq("id", req.player_id).single();
+    if (pl?.user_id) {
+      await supabase.from("notifications").insert({
+        user_id: pl.user_id,
+        type: "connection_rejected",
+        message: `${school.name} 연결 신청이 거절됐습니다. 다시 신청하거나 다른 학교를 검색해보세요.`,
+        link: "/dashboard/player",
+      });
+    }
     setConnectionRequests(prev => prev.filter(r => r.id !== req.id));
     toast.success("연결 요청을 거절했습니다");
   }
@@ -119,6 +139,19 @@ export default function CoachDashboard() {
     await supabase.from("player_season_stats").update({ stats_verified: true, verified_by: user.id, verified_at: new Date().toISOString() }).eq("id", seasonStatId);
     setPlayerSeasons(prev => prev.map(s => s.id === seasonStatId ? { ...s, stats_verified: true } : s));
     setMyPlayers(prev => prev.map(p => p.id === selectedPlayer?.id ? { ...p, stats_verified: true } : p));
+    // 선수에게 인증 알림
+    if (selectedPlayer) {
+      const { data: pl } = await supabase.from("players").select("user_id,name").eq("id", selectedPlayer.id).single();
+      if (pl?.user_id) {
+        const ss = playerSeasons.find(s => s.id === seasonStatId);
+        await supabase.from("notifications").insert({
+          user_id: pl.user_id,
+          type: "stats_verified",
+          message: `${ss?.season || ""}시즌 기록이 감독/코치에 의해 인증됐습니다! ✅`,
+          link: "/dashboard/player",
+        });
+      }
+    }
     toast.success("인증됐습니다! ✅");
   }
 
@@ -155,7 +188,7 @@ export default function CoachDashboard() {
 
       {/* 학교 통계 (학교 등록된 경우) */}
       {school && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div className="card p-3 text-center">
             <Heart size={16} className="text-red-400 mx-auto mb-1"/>
             <div className="text-xl font-extrabold text-navy">{stats.favorites}</div>
@@ -166,11 +199,6 @@ export default function CoachDashboard() {
             <div className="text-xl font-extrabold text-gold">{stats.players}</div>
             <div className="text-[10px] text-gray-500">등록 선수</div>
           </div>
-          <div className="card p-3 text-center">
-            <MessageCircle size={16} className="text-blue-400 mx-auto mb-1"/>
-            <div className="text-xl font-extrabold text-blue-600">{stats.qnaCount}</div>
-            <div className="text-[10px] text-gray-500">질문 수</div>
-          </div>
         </div>
       )}
 
@@ -179,7 +207,6 @@ export default function CoachDashboard() {
           ["school","학교 정보"],
           ["requests", "연결 요청" + (connectionRequests.length > 0 ? ` (${connectionRequests.length})` : "")],
           ["verify","선수 인증 ("+myPlayers.filter(p=>!p.stats_verified).length+")"],
-          ["qa","Q&A ("+qaList.filter(q=>!q.answer).length+")"],
         ].map(([t,l]) => (
           <button key={t} onClick={() => setTab(t)} className={"flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition " + (tab===t ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>{l}</button>
         ))}
@@ -345,7 +372,16 @@ export default function CoachDashboard() {
 
       {tab === "verify" && (
         <div className="space-y-3">
-          <p className="text-xs text-gray-400">소속 선수의 시즌 기록을 확인하고 인증해주세요.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">소속 선수의 시즌 기록을 확인하고 인증해주세요.</p>
+            <button onClick={async () => {
+              const { data: pd } = await supabase.from("players").select("id,name,position,profile_image_url,stats_verified").eq("school_id", school.id).eq("status","active");
+              setMyPlayers(pd||[]);
+              toast.success("새로고침됐습니다");
+            }} className="text-xs text-navy font-bold flex items-center gap-1 hover:underline">
+              🔄 새로고침
+            </button>
+          </div>
           {myPlayers.length === 0 && <div className="card p-8 text-center text-gray-400">소속 선수가 없습니다</div>}
           <div className="space-y-2">
             {myPlayers.map(p => (
@@ -405,34 +441,6 @@ export default function CoachDashboard() {
         </div>
       )}
 
-      {tab === "qa" && (
-        <div className="space-y-3">
-          <p className="text-xs text-gray-400">학부모가 우리 학교에 등록한 질문입니다.</p>
-          {qaList.length === 0 && <div className="card p-8 text-center text-gray-400">아직 질문이 없습니다</div>}
-          {qaList.map(q => (
-            <div key={q.id} className="card overflow-hidden">
-              <div className="p-4">
-                <div className="flex gap-2 mb-2">
-                  <span className={"badge-" + (q.answer ? "green" : "gray") + " text-[10px]"}>{q.answer ? "답변완료" : "미답변"}</span>
-                  <span className="text-xs text-gray-400">{new Date(q.created_at).toLocaleDateString("ko")}</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-800">{q.question}</p>
-              </div>
-              {q.answer ? (
-                <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
-                  <p className="text-xs font-bold text-navy mb-1">내 답변</p>
-                  <p className="text-sm text-gray-700">{q.answer}</p>
-                </div>
-              ) : (
-                <div className="px-4 pb-4 pt-3 bg-gray-50 border-t border-gray-100 space-y-2">
-                  <textarea className="input min-h-[70px] resize-none text-sm" placeholder="답변을 입력하세요..." value={answerMap[q.id]||""} onChange={e => setAnswerMap(m => ({...m,[q.id]:e.target.value}))} />
-                  <button className="btn-primary text-sm py-1.5 px-4" onClick={() => submitAnswer(q.id)}>답변 등록</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

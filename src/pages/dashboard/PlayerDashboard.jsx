@@ -195,6 +195,17 @@ export default function PlayerDashboard() {
       await supabase.from("players").update({ school_name_text: school.name }).eq("id", playerData.id);
       setPlayerData(p => ({ ...p, school_name_text: school.name }));
 
+      // 학교 감독에게 알림 전송
+      const { data: sch } = await supabase.from("schools").select("coach_user_id").eq("id", school.id).single();
+      if (sch?.coach_user_id) {
+        await supabase.from("notifications").insert({
+          user_id: sch.coach_user_id,
+          type: "connection_requested",
+          message: `${playerData.name} 선수가 ${school.name} 연결을 신청했습니다.`,
+          link: "/dashboard/coach",
+        });
+      }
+
       toast.success(`${school.name}에 연결 신청했습니다! 감독/코치 승인을 기다려주세요.`);
       setSchoolSearch("");
       setSchoolResults([]);
@@ -235,6 +246,18 @@ export default function PlayerDashboard() {
     } else {
       const { data } = await supabase.from("player_season_stats").insert(payload).select().single();
       setSeasonStats(data);
+    }
+    // 소속 학교 감독에게 알림 전송
+    if (playerData.school_id) {
+      const { data: sch } = await supabase.from("schools").select("coach_user_id,name").eq("id", playerData.school_id).single();
+      if (sch?.coach_user_id) {
+        await supabase.from("notifications").insert({
+          user_id: sch.coach_user_id,
+          type: "stats_submitted",
+          message: `${form.name || playerData.name} 선수가 ${season}시즌 기록을 업데이트했습니다. 인증해주세요.`,
+          link: "/dashboard/coach",
+        });
+      }
     }
     toast.success(season + "시즌 기록이 저장됐습니다");
     setStatSaving(false);
