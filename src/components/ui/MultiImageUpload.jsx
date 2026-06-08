@@ -51,7 +51,7 @@ export default function MultiImageUpload({ bucket, pathPrefix, currentUrls = [],
           </label>
         )}
       </div>
-      <p className="text-[10px] text-gray-400">{images.length}/{maxCount}장 · 최대 5MB</p>
+      <p className="text-[10px] text-gray-400">{images.length}/{maxCount}장 · 최대 20MB</p>
     </div>
   );
 }
