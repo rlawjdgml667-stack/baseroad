@@ -108,12 +108,28 @@ export default function PlayerDashboard() {
   }
 
   async function loadConnectionStatus(playerId, currentSchoolId) {
-    // 현재 연결된 학교
     if (currentSchoolId) {
+      // 현재 연결된 학교
       const { data: school } = await supabase.from("schools").select("id,name,level").eq("id", currentSchoolId).single();
       setConnectedSchool(school || null);
     } else {
-      setConnectedSchool(null);
+      // school_id가 없어도 승인된 요청이 있으면 자동 복구
+      const { data: approved } = await supabase
+        .from("school_connection_requests")
+        .select("school_id, schools(id,name,level)")
+        .eq("player_id", playerId)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (approved?.schools) {
+        // school_id 자동 업데이트
+        await supabase.from("players").update({ school_id: approved.school_id }).eq("id", playerId);
+        setPlayerData(p => p ? { ...p, school_id: approved.school_id } : p);
+        setConnectedSchool(approved.schools);
+      } else {
+        setConnectedSchool(null);
+      }
     }
     // 대기 중인 요청
     const { data: req } = await supabase
