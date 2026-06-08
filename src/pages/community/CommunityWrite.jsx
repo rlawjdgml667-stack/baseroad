@@ -6,10 +6,12 @@ import { ChevronLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
 const CATEGORIES = ["자유", "질문", "정보공유", "진학상담"];
+const ADMIN_CATEGORIES = ["공지", "자유", "질문", "정보공유", "진학상담"];
 
 export default function CommunityWrite() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const cats = profile?.role === "admin" ? ADMIN_CATEGORIES : CATEGORIES;
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("자유");
@@ -50,7 +52,7 @@ export default function CommunityWrite() {
         <div>
           <label className="text-xs font-bold text-gray-500 mb-1.5 block">카테고리</label>
           <div className="flex gap-2 flex-wrap">
-            {CATEGORIES.map(c => (
+            {cats.map(c => (
               <button key={c} onClick={() => setCategory(c)}
                 className={"px-3 py-1.5 rounded-full text-xs font-bold border transition " +
                   (category === c ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>

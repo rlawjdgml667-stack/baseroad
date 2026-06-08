@@ -5,8 +5,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { PenSquare, MessageCircle, Eye, ChevronRight } from "lucide-react";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 
-const CATEGORIES = ["전체", "자유", "질문", "정보공유", "진학상담"];
+const CATEGORIES = ["전체", "공지", "자유", "질문", "정보공유", "진학상담"];
 const CAT_COLOR = {
+  공지: "bg-red-100 text-red-600",
   자유: "bg-gray-100 text-gray-600",
   질문: "bg-blue-100 text-blue-600",
   정보공유: "bg-green-100 text-green-700",
@@ -91,7 +92,21 @@ export default function CommunityBoard() {
         ))}
       </div>
 
-      {loading ? <LoadingSpinner /> : posts.length === 0 ? (
+      {/* 공지사항 고정 배너 */}
+      {!loading && posts.filter(p => p.category === "공지").length > 0 && (
+        <div className="space-y-1">
+          {posts.filter(p => p.category === "공지").map(post => (
+            <Link key={post.id} to={"/community/" + post.id}
+              className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 hover:bg-red-100 transition">
+              <span className="text-xs font-extrabold text-red-500 flex-shrink-0">📢 공지</span>
+              <span className="text-sm font-bold text-red-700 truncate">{post.title}</span>
+              <span className="ml-auto text-[11px] text-red-400 flex-shrink-0">{timeAgo(post.created_at)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {loading ? <LoadingSpinner /> : posts.filter(p => category === "전체" ? p.category !== "공지" : true).length === 0 ? (
         <div className="card p-12 text-center text-gray-400">
           <MessageCircle size={32} className="mx-auto mb-2 text-gray-200"/>
           <p className="text-sm">아직 게시글이 없어요</p>
@@ -99,7 +114,7 @@ export default function CommunityBoard() {
         </div>
       ) : (
         <div className="space-y-2">
-          {posts.map(post => (
+          {posts.filter(p => category === "전체" ? p.category !== "공지" : true).map(post => (
             <Link key={post.id} to={"/community/" + post.id}
               className="card p-4 block hover:shadow-md transition">
               <div className="flex items-start gap-2 mb-2">

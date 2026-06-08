@@ -79,10 +79,11 @@ export default function CommunityDetail() {
       post_id: id,
       user_id: user.id,
       content: commentText.trim(),
-    }).select("*, profiles(name, role)").single();
+    }).select("id, post_id, user_id, content, created_at").single();
     setSubmitting(false);
-    if (error) { toast.error("댓글 작성 실패"); return; }
-    setComments(prev => [...prev, data]);
+    if (error) { toast.error("댓글 작성 실패: " + error.message); return; }
+    const { data: prof } = await supabase.from("profiles").select("name, role").eq("id", user.id).single();
+    setComments(prev => [...prev, { ...data, profiles: prof }]);
     setCommentText("");
   }
 
