@@ -233,8 +233,8 @@ export default function PlayerList() {
               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-navy bg-white focus:outline-none focus:border-gold transition appearance-none cursor-pointer"
             >
               {(availableSeasons.length > 0
-                ? availableSeasons
-                : Array.from({length:20}, (_,i) => CUR_YEAR + i)
+                ? availableSeasons.filter(y => y >= 2026)
+                : Array.from({length:20}, (_,i) => 2026 + i)
               ).map(y => (
                 <option key={y} value={y}>{y}년</option>
               ))}
