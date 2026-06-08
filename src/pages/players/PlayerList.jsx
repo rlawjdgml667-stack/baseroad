@@ -228,7 +228,7 @@ export default function PlayerList() {
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 flex-shrink-0">시즌</span>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {(availableSeasons.length > 0 ? availableSeasons : [CUR_YEAR, CUR_YEAR-1, CUR_YEAR-2]).map(y => (
+              {(availableSeasons.length > 0 ? availableSeasons : Array.from({length:10}, (_,i) => CUR_YEAR - i)).map(y => (
                 <button key={y} onClick={() => setRankSeason(y)}
                   className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " +
                     (rankSeason === y ? "bg-gold text-white border-gold" : "bg-white text-gray-600 border-gray-200")}>
