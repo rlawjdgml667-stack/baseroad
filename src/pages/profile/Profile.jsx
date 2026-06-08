@@ -1,20 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { LogOut, Settings, Camera, Pencil, Check, X } from "lucide-react";
+import { LogOut, Settings, Camera, Pencil, Check, X, Heart } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function Profile() {
-  const { user, profile, fetchProfile } = useAuth();
-  const { signOut } = useAuth();
+  const { user, profile, fetchProfile, signOut } = useAuth();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [tab, setTab] = useState("info");
+  const [favSchools, setFavSchools] = useState([]);
+  const [favPlayers, setFavPlayers] = useState([]);
+  const [favLoading, setFavLoading] = useState(false);
 
-  async function handleSignOut() {
-    await signOut();
-    toast.success("로그아웃됐습니다");
+  useEffect(() => {
+    if (tab === "favorites" && user) loadFavorites();
+  }, [tab, user]);
+
+  async function loadFavorites() {
+    setFavLoading(true);
+    const [fs, fp] = await Promise.all([
+      supabase.from("favorites").select("target_id").eq("user_id", user.id).eq("target_type", "school"),
+      supabase.from("favorites").select("target_id").eq("user_id", user.id).eq("target_type", "player"),
+    ]);
+    const sIds = (fs.data||[]).map(f => f.target_id);
+    const pIds = (fp.data||[]).map(f => f.target_id);
+    const [schools, players] = await Promise.all([
+      sIds.length > 0 ? supabase.from("schools").select("id,name,level,region").in("id", sIds) : { data: [] },
+      pIds.length > 0 ? supabase.from("players").select("id,name,position,profile_image_url,schools(name)").in("id", pIds) : { data: [] },
+    ]);
+    setFavSchools(schools.data||[]);
+    setFavPlayers(players.data||[]);
+    setFavLoading(false);
+  }
+
+  async function removeFav(targetId, type) {
+    await supabase.from("favorites").delete().eq("user_id", user.id).eq("target_id", targetId).eq("target_type", type);
+    if (type === "school") setFavSchools(prev => prev.filter(s => s.id !== targetId));
+    else setFavPlayers(prev => prev.filter(p => p.id !== targetId));
+    toast.success("관심 목록에서 제거됐습니다");
   }
 
   async function handlePhotoUpload(e) {
@@ -52,13 +78,13 @@ export default function Profile() {
   const roleLabel = { admin:"관리자", coach:"감독·코치", player:"선수", parent:"학부모" };
   const roleBg = { admin:"bg-red-100 text-red-700", coach:"bg-orange-100 text-orange-700", player:"bg-green-100 text-green-700", parent:"bg-blue-100 text-blue-700" };
   const dashLink = { admin:"/dashboard/admin", coach:"/dashboard/coach", player:"/dashboard/player", parent:"/dashboard/parent" };
+  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
   return (
     <div className="space-y-4 max-w-md mx-auto">
       {/* 프로필 카드 */}
       <div className="card p-6">
-        {/* 프로필 사진 */}
-        <div className="flex flex-col items-center gap-3 mb-5">
+        <div className="flex flex-col items-center gap-3 mb-4">
           <div className="relative">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-navy/10 flex items-center justify-center border-4 border-white shadow-md">
               {profile?.avatar_url
@@ -70,62 +96,112 @@ export default function Profile() {
               <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto}/>
             </label>
           </div>
-
-          {/* 이름 */}
           {editingName ? (
             <div className="flex items-center gap-2">
-              <input
-                className="input text-center font-extrabold text-lg py-1"
-                value={nameInput}
-                onChange={e => setNameInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && saveName()}
-                autoFocus
-              />
-              <button onClick={saveName} className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600">
-                <Check size={14}/>
-              </button>
-              <button onClick={() => setEditingName(false)} className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300">
-                <X size={14}/>
-              </button>
+              <input className="input text-center font-extrabold text-lg py-1" value={nameInput}
+                onChange={e => setNameInput(e.target.value)} onKeyDown={e => e.key === "Enter" && saveName()} autoFocus />
+              <button onClick={saveName} className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600"><Check size={14}/></button>
+              <button onClick={() => setEditingName(false)} className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"><X size={14}/></button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-xl">{profile?.name || "이름 없음"}</span>
               <button onClick={() => { setNameInput(profile?.name || ""); setEditingName(true); }}
-                className="w-6 h-6 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200">
-                <Pencil size={11}/>
-              </button>
+                className="w-6 h-6 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200"><Pencil size={11}/></button>
             </div>
           )}
-
-          {/* 역할 / 상태 뱃지 */}
           <div className="flex items-center gap-1.5">
             <span className={"text-xs font-bold px-2.5 py-1 rounded-full " + (roleBg[profile?.role] || "bg-gray-100 text-gray-600")}>
               {roleLabel[profile?.role] || profile?.role}
             </span>
             {profile?.status === "pending" && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">승인 대기</span>}
             {profile?.status === "active" && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">활성</span>}
-            {profile?.status === "suspended" && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">정지</span>}
           </div>
-
           <div className="text-xs text-gray-400">{user.email}</div>
+        </div>
+
+        {/* 탭 */}
+        <div className="flex gap-2 border-t border-gray-100 pt-4">
+          {[["info","내 정보"],["favorites","관심 목록 ❤️"]].map(([t,l]) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={"flex-1 py-2 text-xs font-bold rounded-lg transition " + (tab===t ? "bg-navy text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
+              {l}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 메뉴 */}
-      <div className="card divide-y divide-gray-100">
-        {dashLink[profile?.role] && (
-          <Link to={dashLink[profile?.role]} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition">
-            <Settings size={18} className="text-navy"/>
-            <span className="font-semibold text-sm">내 대시보드</span>
-            <span className="ml-auto text-gray-300">›</span>
-          </Link>
-        )}
-        <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-4 hover:bg-red-50 transition text-left">
-          <LogOut size={18} className="text-red-400"/>
-          <span className="font-semibold text-sm text-red-500">로그아웃</span>
-        </button>
-      </div>
+      {/* 내 정보 탭 */}
+      {tab === "info" && (
+        <div className="card divide-y divide-gray-100">
+          {dashLink[profile?.role] && (
+            <Link to={dashLink[profile?.role]} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition">
+              <Settings size={18} className="text-navy"/>
+              <span className="font-semibold text-sm">내 대시보드</span>
+              <span className="ml-auto text-gray-300">›</span>
+            </Link>
+          )}
+          <button onClick={async () => { await signOut(); toast.success("로그아웃됐습니다"); }}
+            className="w-full flex items-center gap-3 p-4 hover:bg-red-50 transition text-left">
+            <LogOut size={18} className="text-red-400"/>
+            <span className="font-semibold text-sm text-red-500">로그아웃</span>
+          </button>
+        </div>
+      )}
+
+      {/* 관심 목록 탭 */}
+      {tab === "favorites" && (
+        <div className="space-y-4">
+          {favLoading && <div className="card p-6 text-center text-gray-400 text-sm">불러오는 중...</div>}
+
+          {/* 관심 학교 */}
+          <div>
+            <h3 className="text-sm font-extrabold text-navy mb-2">🏫 관심 학교 ({favSchools.length})</h3>
+            {favSchools.length === 0
+              ? <div className="card p-4 text-center text-gray-400 text-xs">관심 학교가 없습니다</div>
+              : <div className="space-y-2">
+                {favSchools.map(s => (
+                  <div key={s.id} className="card p-3 flex items-center gap-3">
+                    <Link to={`/schools/${s.id}`} className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate">{s.name}</div>
+                      <div className="text-xs text-gray-400">{levelLabel[s.level]||s.level} · {s.region}</div>
+                    </Link>
+                    <button onClick={() => removeFav(s.id, "school")} className="text-red-400 hover:text-red-600">
+                      <Heart size={16} fill="#f87171"/>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            }
+          </div>
+
+          {/* 관심 선수 */}
+          <div>
+            <h3 className="text-sm font-extrabold text-navy mb-2">⚾ 관심 선수 ({favPlayers.length})</h3>
+            {favPlayers.length === 0
+              ? <div className="card p-4 text-center text-gray-400 text-xs">관심 선수가 없습니다</div>
+              : <div className="space-y-2">
+                {favPlayers.map(p => (
+                  <div key={p.id} className="card p-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-navy/10 flex-shrink-0">
+                      {p.profile_image_url
+                        ? <img src={p.profile_image_url} className="w-full h-full object-cover" alt={p.name}/>
+                        : <div className="w-full h-full flex items-center justify-center font-bold text-navy/30">{p.name?.[0]}</div>}
+                    </div>
+                    <Link to={`/players/${p.id}`} className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate">{p.name}</div>
+                      <div className="text-xs text-gray-400">{p.position} {p.schools?.name ? `· ${p.schools.name}` : ""}</div>
+                    </Link>
+                    <button onClick={() => removeFav(p.id, "player")} className="text-red-400 hover:text-red-600">
+                      <Heart size={16} fill="#f87171"/>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            }
+          </div>
+        </div>
+      )}
     </div>
   );
 }
