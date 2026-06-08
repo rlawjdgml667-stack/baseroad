@@ -26,7 +26,7 @@ export default function CommunityBoard() {
     setLoading(true);
     let query = supabase
       .from("posts")
-      .select("id, title, category, view_count, created_at, user_id, profiles(name, role)")
+      .select("id, title, category, view_count, created_at, user_id")
       .order("created_at", { ascending: false });
     if (category !== "전체") query = query.eq("category", category);
     const { data } = await query;
@@ -42,7 +42,14 @@ export default function CommunityBoard() {
         commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1;
       });
     }
-    setPosts((data || []).map(p => ({ ...p, commentCount: commentCounts[p.id] || 0 })));
+    // profiles 별도 조회
+    const userIds = [...new Set((data || []).map(p => p.user_id).filter(Boolean))];
+    let profileMap = {};
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase.from("profiles").select("id, name, role").in("id", userIds);
+      (profs || []).forEach(pr => { profileMap[pr.id] = pr; });
+    }
+    setPosts((data || []).map(p => ({ ...p, commentCount: commentCounts[p.id] || 0, profiles: profileMap[p.user_id] || null })));
     setLoading(false);
   }
 

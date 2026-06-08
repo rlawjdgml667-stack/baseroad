@@ -40,17 +40,34 @@ export default function CommunityDetail() {
   useEffect(() => { loadPost(); }, [id]);
 
   async function loadPost() {
-    // 조회수 증가
-    await supabase.rpc("increment_view", { post_id: id }).catch(() => {
-      supabase.from("posts").update({ view_count: 1 }).eq("id", id);
+    // 조회수 증가 (실패해도 무시)
+    supabase.from("posts").select("view_count").eq("id", id).single().then(({ data }) => {
+      if (data) supabase.from("posts").update({ view_count: (data.view_count || 0) + 1 }).eq("id", id);
     });
 
-    const [{ data: p }, { data: c }] = await Promise.all([
-      supabase.from("posts").select("*, profiles(name, role)").eq("id", id).single(),
-      supabase.from("comments").select("*, profiles(name, role)").eq("post_id", id).order("created_at", { ascending: true }),
+    const [{ data: p, error: pe }, { data: c }] = await Promise.all([
+      supabase.from("posts").select("*, profiles!posts_user_id_fkey(name, role)").eq("id", id).single(),
+      supabase.from("comments").select("*, profiles!comments_user_id_fkey(name, role)").eq("post_id", id).order("created_at", { ascending: true }),
     ]);
-    setPost(p);
-    setComments(c || []);
+
+    // join 실패시 fallback
+    if (pe || !p) {
+      const { data: p2 } = await supabase.from("posts").select("*").eq("id", id).single();
+      if (p2) {
+        const { data: prof } = await supabase.from("profiles").select("name, role").eq("id", p2.user_id).single();
+        setPost({ ...p2, profiles: prof });
+      }
+    } else {
+      setPost(p);
+    }
+
+    // 댓글 profiles fallback
+    const commentsWithProfiles = await Promise.all((c || []).map(async (cm) => {
+      if (cm.profiles) return cm;
+      const { data: prof } = await supabase.from("profiles").select("name, role").eq("id", cm.user_id).single();
+      return { ...cm, profiles: prof };
+    }));
+    setComments(commentsWithProfiles);
     setLoading(false);
   }
 
