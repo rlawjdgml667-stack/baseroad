@@ -39,6 +39,7 @@ export default function ImageUpload({ bucket, path, currentUrl, onUpload }) {
         <span className="text-sm text-gray-500">{uploading ? "업로드 중..." : "이미지 선택 (최대 5MB)"}</span>
         <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
       </label>
+      <p className="text-[10px] text-amber-600">📷 본인이 직접 촬영한 사진만 업로드 가능합니다. 방송·중계 캡처 등 타인의 저작물은 업로드가 금지됩니다.</p>
     </div>
   );
 }

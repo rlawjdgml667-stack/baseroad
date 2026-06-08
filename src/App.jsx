@@ -18,6 +18,8 @@ import CoachDashboard from "./pages/dashboard/CoachDashboard";
 import PlayerDashboard from "./pages/dashboard/PlayerDashboard";
 import ParentDashboard from "./pages/dashboard/ParentDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
 
 function ProtectedRoute({ children, roles }) {
   const { user, profile, loading } = useAuth();
@@ -54,6 +56,8 @@ export default function App() {
         <Route path="/dashboard/admin" element={
           <ProtectedRoute roles={["admin"]}><AdminDashboard /></ProtectedRoute>
         } />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
