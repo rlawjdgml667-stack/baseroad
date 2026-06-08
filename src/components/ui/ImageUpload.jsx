@@ -10,7 +10,7 @@ export default function ImageUpload({ bucket, path, currentUrl, onUpload }) {
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("5MB 이하 이미지만 업로드 가능합니다"); return; }
+    if (file.size > 20 * 1024 * 1024) { toast.error("20MB 이하 이미지만 업로드 가능합니다"); return; }
     setUploading(true);
     const ext = file.name.split(".").pop();
     const filePath = path + "." + ext;

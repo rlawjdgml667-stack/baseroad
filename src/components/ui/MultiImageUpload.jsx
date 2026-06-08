@@ -11,7 +11,7 @@ export default function MultiImageUpload({ bucket, pathPrefix, currentUrls = [],
     const file = e.target.files?.[0];
     if (!file) return;
     if (images.length >= maxCount) { toast.error("최대 " + maxCount + "장까지 업로드 가능합니다"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("5MB 이하 이미지만 업로드 가능합니다"); return; }
+    if (file.size > 20 * 1024 * 1024) { toast.error("20MB 이하 이미지만 업로드 가능합니다"); return; }
     setUploading(true);
     const ext = file.name.split(".").pop();
     const filePath = pathPrefix + "-" + Date.now() + "." + ext;
