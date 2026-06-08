@@ -25,7 +25,17 @@ export default function Register() {
     if (role === "player" && !form.parentConsent) { toast.error("미성년자는 보호자 동의가 필요합니다"); return; }
     setLoading(true);
     const { error } = await signUp(form.email, form.password, { name: form.name, role, school_name: form.schoolName, phone: form.phone });
-    if (error) { toast.error(error.message); }
+    if (error) {
+      if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+        toast.error("이미 가입된 이메일입니다!");
+      } else if (error.message.includes("Password should be at least")) {
+        toast.error("비밀번호는 6자 이상이어야 합니다");
+      } else if (error.message.includes("invalid")) {
+        toast.error("이메일 형식이 올바르지 않습니다");
+      } else {
+        toast.error(error.message);
+      }
+    }
     else {
       if (role === "coach") toast.success("가입 신청이 완료됐습니다. 관리자 승인 후 이용하실 수 있습니다.");
       else toast.success("회원가입이 완료됐습니다!");
