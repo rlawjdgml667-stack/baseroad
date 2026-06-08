@@ -13,7 +13,7 @@ const CUR_YEAR = new Date().getFullYear();
 const SEASONS = Array.from({ length: 6 }, (_, i) => CUR_YEAR - i);
 
 export default function CoachDashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, fetchProfile } = useAuth();
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,7 +109,10 @@ export default function CoachDashboard() {
     <div className="card p-8 text-center">
       <div className="text-5xl mb-4">⏳</div>
       <h2 className="text-xl font-extrabold text-navy mb-2">승인 대기 중</h2>
-      <p className="text-gray-500 text-sm">관리자 승인 후 학교 정보를 등록하실 수 있습니다.<br/>보통 1-2 영업일 내로 처리됩니다.</p>
+      <p className="text-gray-500 text-sm mb-4">관리자 승인 후 학교 정보를 등록하실 수 있습니다.<br/>보통 1-2 영업일 내로 처리됩니다.</p>
+      <button onClick={() => fetchProfile(user.id)} className="btn-outline text-sm">
+        🔄 승인 여부 확인
+      </button>
     </div>
   );
 

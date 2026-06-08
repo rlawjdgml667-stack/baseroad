@@ -200,15 +200,25 @@ export default function AdminDashboard() {
         <div className="space-y-2.5">
           {pendingCoaches.length === 0 && <div className="card p-8 text-center text-gray-400">승인 대기 중인 계정이 없습니다</div>}
           {pendingCoaches.map(c => (
-            <div key={c.id} className="card p-4 flex items-center gap-3">
-              <div className="flex-1">
-                <div className="font-bold text-sm">{c.name}</div>
-                <div className="text-xs text-gray-400">{c.email} · {new Date(c.created_at).toLocaleDateString("ko")}</div>
-                {c.school_name && <div className="text-xs text-navy mt-0.5">🏫 {c.school_name}</div>}
-                {c.phone && <div className="text-xs text-gray-400 mt-0.5">📞 {c.phone}</div>}
+            <div key={c.id} className="card p-4">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-navy/10 flex items-center justify-center flex-shrink-0 text-base font-extrabold text-navy/40">
+                  {c.name?.[0]}
+                </div>
+                <div className="flex-1">
+                  <div className="font-extrabold text-sm">{c.name}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{c.email}</div>
+                  {c.school_name
+                    ? <div className="text-xs text-navy font-bold mt-1">🏫 {c.school_name} 감독·코치</div>
+                    : <div className="text-xs text-gray-400 mt-1">🏫 학교명 미입력</div>}
+                  {c.phone && <div className="text-xs text-gray-500 mt-0.5">📞 {c.phone}</div>}
+                  <div className="text-xs text-gray-300 mt-0.5">가입일: {new Date(c.created_at).toLocaleDateString("ko")}</div>
+                </div>
               </div>
-              <button onClick={() => approveCoach(c.id)} className="btn-primary text-xs py-1.5 px-3">승인</button>
-              <button onClick={() => rejectCoach(c.id)} className="btn-ghost text-xs py-1.5 px-3 text-red-500">반려</button>
+              <div className="flex gap-2">
+                <button onClick={() => approveCoach(c.id)} className="btn-primary text-xs py-1.5 flex-1">✅ 승인</button>
+                <button onClick={() => rejectCoach(c.id)} className="bg-red-50 text-red-500 font-bold text-xs py-1.5 px-4 rounded-lg border border-red-100 hover:bg-red-100 transition">반려</button>
+              </div>
             </div>
           ))}
         </div>

@@ -38,6 +38,8 @@ export function AuthProvider({ children }) {
       await supabase.from("profiles").upsert({
         id: data.user.id, email,
         role: meta.role, name: meta.name,
+        phone: meta.phone || null,
+        school_name: meta.school_name || null,
         status: meta.role === "coach" ? "pending" : "active",
       });
     }
