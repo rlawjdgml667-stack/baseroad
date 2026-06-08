@@ -87,7 +87,7 @@ export default function SchoolDetail() {
       <div className="card">
         <div className="relative h-48 bg-navy overflow-hidden">
           {school.main_image_url
-            ? <img src={school.main_image_url} className="w-full h-full object-cover opacity-80" alt={school.name} />
+            ? <img src={school.main_image_url} className="w-full h-full object-contain opacity-80" alt={school.name} />
             : <div className="w-full h-full flex items-center justify-center text-7xl opacity-10">⚾</div>}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className="absolute bottom-0 left-0 p-4 text-white">
