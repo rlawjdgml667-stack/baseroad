@@ -8,7 +8,7 @@ export default function Layout({ children }) {
       <Navbar />
       <main className="max-w-screen-lg mx-auto px-3 py-4 pb-20 sm:pb-6">{children}</main>
       <BottomNav />
-      <Toaster position="bottom-center" toastOptions={{ style: { fontFamily: "inherit", fontSize: 13 } }} />
+      <Toaster position="bottom-center" containerStyle={{ bottom: 72 }} toastOptions={{ style: { fontFamily: "inherit", fontSize: 13 } }} />
     </div>
   );
 }

@@ -416,7 +416,7 @@ export default function PlayerDashboard() {
                   )}
                   <p className="text-xs text-gray-400 mb-3">학교명으로 검색하여 연결을 신청하세요. 해당 학교 감독/코치가 승인하면 학교 페이지에 등록됩니다.</p>
 
-                  <div className="relative pb-48">
+                  <div className={(schoolResults.length > 0 || searchLoading) ? "relative pb-48" : "relative"}>
                     <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white focus-within:border-navy transition">
                       <Search size={15} className="text-gray-400 flex-shrink-0"/>
                       <input

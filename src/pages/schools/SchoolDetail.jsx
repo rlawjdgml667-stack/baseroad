@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import FacilityBadge from "../../components/school/FacilityBadge";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import PlayerCard from "../../components/player/PlayerCard";
-import { Heart, MapPin, Phone, Mail, ChevronLeft } from "lucide-react";
+import { Heart, MapPin, Phone, Mail, ChevronLeft, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 function extractYtId(url) {
@@ -203,7 +203,20 @@ if (loading) return <LoadingSpinner />;
 
       {imgIdx !== null && (
         <div className="fixed inset-0 bg-black/90 z-[300] flex items-center justify-center p-4" onClick={() => setImgIdx(null)}>
-          <img src={facImgs[imgIdx]} alt="시설" className="max-w-full max-h-full rounded-xl" />
+          <button
+            className="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/40 transition"
+            onClick={e => { e.stopPropagation(); setImgIdx(null); }}>
+            <X size={20}/>
+          </button>
+          <img src={facImgs[imgIdx]} alt="시설" className="max-w-full max-h-[85vh] rounded-xl" onClick={e => e.stopPropagation()} />
+          {facImgs.length > 1 && (
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5">
+              {facImgs.map((_, i) => (
+                <button key={i} onClick={e => { e.stopPropagation(); setImgIdx(i); }}
+                  className={"w-2 h-2 rounded-full transition " + (i === imgIdx ? "bg-white" : "bg-white/40")} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

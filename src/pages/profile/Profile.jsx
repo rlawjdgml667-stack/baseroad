@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { LogOut, Settings, Camera, Pencil, Check, X, Heart } from "lucide-react";
+import { LogOut, Settings, Camera, Pencil, Check, X, Heart, Lock, Eye, EyeOff, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function Profile() {
   const { user, profile, fetchProfile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -15,9 +16,33 @@ export default function Profile() {
   const [favPlayers, setFavPlayers] = useState([]);
   const [favLoading, setFavLoading] = useState(false);
 
+  // 비밀번호 변경
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+
+  // 선수 공개 여부 (선수 계정만)
+  const [playerStatus, setPlayerStatus] = useState(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+
+  // 계정 삭제
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   useEffect(() => {
     if (tab === "favorites" && user) loadFavorites();
   }, [tab, user]);
+
+  // 선수이면 현재 status 로드
+  useEffect(() => {
+    if (profile?.role === "player" && user) {
+      supabase.from("players").select("status").eq("user_id", user.id).maybeSingle()
+        .then(({ data }) => { if (data) setPlayerStatus(data.status); });
+    }
+  }, [profile, user]);
 
   async function loadFavorites() {
     setFavLoading(true);
@@ -53,7 +78,9 @@ export default function Profile() {
     const { error } = await supabase.storage.from("player-images").upload(path, file, { upsert: true });
     if (error) { toast.error("업로드 실패"); setUploadingPhoto(false); return; }
     const { data } = supabase.storage.from("player-images").getPublicUrl(path);
-    await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
+    // 캐시 버스팅을 위해 타임스탬프 추가
+    const avatarUrl = data.publicUrl + "?t=" + Date.now();
+    await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
     await fetchProfile(user.id);
     toast.success("프로필 사진이 변경됐습니다!");
     setUploadingPhoto(false);
@@ -65,6 +92,43 @@ export default function Profile() {
     await fetchProfile(user.id);
     setEditingName(false);
     toast.success("이름이 변경됐습니다!");
+  }
+
+  async function changePassword() {
+    if (!pwNew || pwNew.length < 6) { toast.error("비밀번호는 6자 이상이어야 합니다"); return; }
+    if (pwNew !== pwConfirm) { toast.error("새 비밀번호가 일치하지 않습니다"); return; }
+    setSavingPw(true);
+    const { error } = await supabase.auth.updateUser({ password: pwNew });
+    setSavingPw(false);
+    if (error) { toast.error("비밀번호 변경 실패: " + error.message); return; }
+    toast.success("비밀번호가 변경됐습니다!");
+    setShowPwForm(false);
+    setPwCurrent(""); setPwNew(""); setPwConfirm("");
+  }
+
+  async function togglePlayerVisibility() {
+    if (!playerStatus) return;
+    setTogglingStatus(true);
+    const newStatus = playerStatus === "active" ? "inactive" : "active";
+    const { error } = await supabase.from("players").update({ status: newStatus }).eq("user_id", user.id);
+    if (error) { toast.error("상태 변경 실패"); }
+    else {
+      setPlayerStatus(newStatus);
+      toast.success(newStatus === "active" ? "프로필이 공개됐습니다" : "프로필이 비공개됐습니다");
+    }
+    setTogglingStatus(false);
+  }
+
+  async function deleteAccount() {
+    setDeletingAccount(true);
+    // 소프트 삭제: profiles 상태를 deleted_request로, 선수이면 inactive
+    await supabase.from("profiles").update({ status: "deleted_request" }).eq("id", user.id);
+    if (profile?.role === "player") {
+      await supabase.from("players").update({ status: "inactive" }).eq("user_id", user.id);
+    }
+    await signOut();
+    toast.success("계정 삭제 요청이 접수됐습니다. 7일 이내 처리됩니다.");
+    navigate("/");
   }
 
   if (!user) return (
@@ -133,19 +197,95 @@ export default function Profile() {
 
       {/* 내 정보 탭 */}
       {tab === "info" && (
-        <div className="card divide-y divide-gray-100">
-          {dashLink[profile?.role] && (
-            <Link to={dashLink[profile?.role]} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition">
-              <Settings size={18} className="text-navy"/>
-              <span className="font-semibold text-sm">내 대시보드</span>
-              <span className="ml-auto text-gray-300">›</span>
-            </Link>
-          )}
-          <button onClick={async () => { await signOut(); toast.success("로그아웃됐습니다"); }}
-            className="w-full flex items-center gap-3 p-4 hover:bg-red-50 transition text-left">
-            <LogOut size={18} className="text-red-400"/>
-            <span className="font-semibold text-sm text-red-500">로그아웃</span>
-          </button>
+        <div className="space-y-3">
+          <div className="card divide-y divide-gray-100">
+            {dashLink[profile?.role] && (
+              <Link to={dashLink[profile?.role]} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition">
+                <Settings size={18} className="text-navy"/>
+                <span className="font-semibold text-sm">내 대시보드</span>
+                <span className="ml-auto text-gray-300">›</span>
+              </Link>
+            )}
+
+            {/* 비밀번호 변경 */}
+            <div>
+              <button onClick={() => setShowPwForm(v => !v)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition text-left">
+                <Lock size={18} className="text-navy"/>
+                <span className="font-semibold text-sm">비밀번호 변경</span>
+                <span className="ml-auto text-gray-300">{showPwForm ? "∧" : "›"}</span>
+              </button>
+              {showPwForm && (
+                <div className="px-4 pb-4 space-y-2">
+                  <div className="relative">
+                    <input type={showPw ? "text" : "password"} className="input pr-10" placeholder="새 비밀번호 (6자 이상)"
+                      value={pwNew} onChange={e => setPwNew(e.target.value)} />
+                    <button type="button" onClick={() => setShowPw(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+                    </button>
+                  </div>
+                  <input type={showPw ? "text" : "password"} className="input" placeholder="새 비밀번호 확인"
+                    value={pwConfirm} onChange={e => setPwConfirm(e.target.value)} />
+                  <button onClick={changePassword} disabled={savingPw}
+                    className="w-full py-2 bg-navy text-white text-sm font-bold rounded-xl hover:bg-navy/90 transition disabled:opacity-50">
+                    {savingPw ? "변경 중..." : "비밀번호 변경"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 선수 프로필 공개/비공개 토글 */}
+            {profile?.role === "player" && playerStatus !== null && (
+              <button onClick={togglePlayerVisibility} disabled={togglingStatus}
+                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition text-left">
+                {playerStatus === "active"
+                  ? <ToggleRight size={20} className="text-green-500"/>
+                  : <ToggleLeft size={20} className="text-gray-400"/>}
+                <div className="flex-1">
+                  <span className="font-semibold text-sm block">프로필 공개 설정</span>
+                  <span className="text-xs text-gray-400">{playerStatus === "active" ? "현재 공개 중 · 눌러서 비공개" : "현재 비공개 · 눌러서 공개"}</span>
+                </div>
+                <span className={"text-xs font-bold px-2 py-0.5 rounded-full " + (playerStatus === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500")}>
+                  {playerStatus === "active" ? "공개" : "비공개"}
+                </span>
+              </button>
+            )}
+
+            <button onClick={async () => { await signOut(); toast.success("로그아웃됐습니다"); }}
+              className="w-full flex items-center gap-3 p-4 hover:bg-red-50 transition text-left">
+              <LogOut size={18} className="text-red-400"/>
+              <span className="font-semibold text-sm text-red-500">로그아웃</span>
+            </button>
+          </div>
+
+          {/* 계정 삭제 */}
+          <div className="card divide-y divide-gray-100">
+            {!showDeleteConfirm ? (
+              <button onClick={() => setShowDeleteConfirm(true)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-red-50 transition text-left">
+                <Trash2 size={18} className="text-red-300"/>
+                <span className="font-semibold text-sm text-red-400">계정 삭제</span>
+              </button>
+            ) : (
+              <div className="p-4 space-y-3">
+                <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                  <p className="text-sm font-bold text-red-600 mb-1">⚠️ 계정을 삭제하시겠습니까?</p>
+                  <p className="text-xs text-red-400">삭제 요청 후 7일 이내 처리됩니다. 선수 프로필은 즉시 비공개 처리됩니다.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition">
+                    취소
+                  </button>
+                  <button onClick={deleteAccount} disabled={deletingAccount}
+                    className="flex-1 py-2 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition disabled:opacity-50">
+                    {deletingAccount ? "처리 중..." : "삭제 요청"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

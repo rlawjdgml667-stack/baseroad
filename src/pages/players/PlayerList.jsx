@@ -46,6 +46,7 @@ export default function PlayerList() {
   const [rankPos, setRankPos] = useState("투수");
   const [rankStat, setRankStat] = useState("era");
   const [rankGrade, setRankGrade] = useState("전체");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -127,7 +128,7 @@ export default function PlayerList() {
   });
 
   const ranked = [...rankPlayers]
-    .filter(p => getStat(p, currentRankStat.key) != null && meetsMinimum(p))
+    .filter(p => getStat(p, currentRankStat.key) != null && meetsMinimum(p) && (!verifiedOnly || p.latestStats?.stats_verified))
     .sort((a, b) => currentRankStat.asc
       ? (Number(getStat(a, currentRankStat.key))||999) - (Number(getStat(b, currentRankStat.key))||999)
       : (Number(getStat(b, currentRankStat.key))||0) - (Number(getStat(a, currentRankStat.key))||0))
@@ -235,11 +236,17 @@ export default function PlayerList() {
             ))}
           </div>
 
-          {/* 최소 기준 안내 */}
-          <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-700">
-            {rankPos === "투수"
-              ? "⚠️ 15이닝 미만 선수는 랭킹에 표시되지 않습니다"
-              : "⚠️ 30타수 미만 선수는 랭킹에 표시되지 않습니다"}
+          {/* 인증 기록만 토글 */}
+          <div className="flex items-center justify-between">
+            <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-700 flex-1 mr-2">
+              {rankPos === "투수"
+                ? "⚠️ 15이닝 미만 선수는 랭킹에 표시되지 않습니다"
+                : "⚠️ 30타수 미만 선수는 랭킹에 표시되지 않습니다"}
+            </div>
+            <button onClick={() => setVerifiedOnly(v => !v)}
+              className={"flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition " + (verifiedOnly ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-500 border-gray-200")}>
+              ✅ 인증만
+            </button>
           </div>
 
           {loading ? <LoadingSpinner /> : ranked.length === 0 ? (

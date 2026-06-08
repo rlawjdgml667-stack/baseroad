@@ -12,20 +12,20 @@ const posColor = {
 };
 
 const PITCHER_STATS = [
-  ["era","방어율",""],["wins","승","승"],["losses","패","패"],
-  ["saves","세이브","SV"],["innings_pitched","이닝","이닝"],
-  ["strikeouts","탈삼진","K"],["walks","볼넷","BB"],["hits_allowed","피안타","안타"],
+  ["era","방어율"],["wins","승"],["losses","패"],
+  ["saves","세이브"],["innings","이닝"],
+  ["k_count","탈삼진"],["whip","WHIP"],
 ];
 
 const BATTER_STATS = [
-  ["batting_avg","타율",""],["home_runs","홈런","HR"],["rbi","타점","타점"],
-  ["hits","안타","안타"],["runs","득점","득점"],["stolen_bases","도루","도루"],
-  ["obp","출루율",""],["ops","OPS",""],
+  ["avg","타율"],["hr","홈런"],["rbi","타점"],
+  ["h","안타"],["sb","도루"],["obp","출루율"],["ops","OPS"],["ab","타수"],
 ];
 
 export default function PlayerCompare() {
   const [allPlayers, setAllPlayers] = useState([]);
   const [selected, setSelected] = useState([null, null, null]);
+  const [statsMap, setStatsMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectingSlot, setSelectingSlot] = useState(null);
@@ -37,13 +37,27 @@ export default function PlayerCompare() {
     });
   }, []);
 
-  function selectPlayer(player) {
+  // 선수 선택 시 시즌 기록 로드
+  async function selectPlayer(player) {
     if (selectingSlot === null) return;
     const newSelected = [...selected];
     newSelected[selectingSlot] = player;
     setSelected(newSelected);
     setSelectingSlot(null);
     setSearch("");
+
+    // 시즌 기록 로드 (최신 시즌, 인증된 것 우선)
+    if (!statsMap[player.id]) {
+      const { data } = await supabase
+        .from("player_season_stats")
+        .select("season, computed_stats, raw_stats, stats_verified")
+        .eq("player_id", player.id)
+        .order("season", { ascending: false });
+      if (data && data.length > 0) {
+        const best = data.find(s => s.stats_verified) || data[0];
+        setStatsMap(prev => ({ ...prev, [player.id]: best }));
+      }
+    }
   }
 
   function removePlayer(idx) {
@@ -53,13 +67,16 @@ export default function PlayerCompare() {
   }
 
   const activePlayers = selected.filter(Boolean);
-  const searchResults = search ? allPlayers.filter(p => p.name.includes(search) || (p.schools?.name||"").includes(search) || (p.position||"").includes(search)).slice(0, 8) : [];
+  const searchResults = search
+    ? allPlayers.filter(p => p.name.includes(search) || (p.schools?.name||"").includes(search) || (p.position||"").includes(search)).slice(0, 8)
+    : [];
 
-  // 포지션별 스탯 결정
   const hasPitcher = activePlayers.some(p => p.position === "투수");
   const hasBatter = activePlayers.some(p => p.position !== "투수");
-  const pitcherStats = hasPitcher ? PITCHER_STATS : [];
-  const batterStats = hasBatter ? BATTER_STATS : [];
+
+  const getStat = (player, key) => statsMap[player.id]?.computed_stats?.[key] ?? "-";
+  const getStatVerified = (player) => statsMap[player.id]?.stats_verified;
+  const getStatSeason = (player) => statsMap[player.id]?.season;
 
   if (loading) return <LoadingSpinner />;
 
@@ -89,6 +106,12 @@ export default function PlayerCompare() {
                 <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-1 inline-block " + (posColor[selected[idx].position]||"bg-gray-100 text-gray-600")}>
                   {selected[idx].position}
                 </span>
+                {statsMap[selected[idx].id] && (
+                  <div className="text-[9px] mt-1 text-gray-400">
+                    {getStatSeason(selected[idx])}년
+                    {getStatVerified(selected[idx]) ? " ✅" : " (미인증)"}
+                  </div>
+                )}
               </div>
             ) : (
               <button onClick={() => setSelectingSlot(idx)}
@@ -144,8 +167,8 @@ export default function PlayerCompare() {
                   {[
                     ["포지션", p => p.position||"-"],
                     ["학교", p => p.schools?.name||"-"],
-                    ["학년", p => p.grade||"-"],
-                    ["투타", p => p.bat_throw||"-"],
+                    ["출생연도", p => p.birth_year ? p.birth_year+"년생" : "-"],
+                    ["투타", p => p.dominant_hand||"-"],
                     ["신장", p => p.height ? p.height+"cm" : "-"],
                     ["체중", p => p.weight ? p.weight+"kg" : "-"],
                   ].map(([label, getter]) => (
@@ -160,20 +183,22 @@ export default function PlayerCompare() {
           </div>
 
           {/* 투수 스탯 */}
-          {pitcherStats.length > 0 && (
+          {hasPitcher && (
             <div className="card overflow-hidden">
               <div className="bg-red-500 px-4 py-2">
-                <span className="text-white text-xs font-extrabold">투수 스탯</span>
+                <span className="text-white text-xs font-extrabold">⚾ 투수 스탯</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <tbody>
-                    {pitcherStats.map(([key, label, unit]) => (
+                    {PITCHER_STATS.map(([key, label]) => (
                       <tr key={key} className="border-b border-gray-50 even:bg-gray-50/50">
                         <td className="p-2 text-gray-500 font-bold w-16">{label}</td>
                         {selected.map((p, i) => p && (
                           <td key={i} className="p-2 text-center font-bold text-navy">
-                            {p.position === "투수" ? (p[key] != null ? p[key]+(unit?" "+unit:"") : "-") : <span className="text-gray-300">N/A</span>}
+                            {p.position === "투수"
+                              ? <span className={getStat(p,key) !== "-" ? "text-navy" : "text-gray-300"}>{getStat(p, key)}</span>
+                              : <span className="text-gray-300">N/A</span>}
                           </td>
                         ))}
                       </tr>
@@ -185,20 +210,22 @@ export default function PlayerCompare() {
           )}
 
           {/* 타자 스탯 */}
-          {batterStats.length > 0 && (
+          {hasBatter && (
             <div className="card overflow-hidden">
               <div className="bg-blue-600 px-4 py-2">
-                <span className="text-white text-xs font-extrabold">타자 스탯</span>
+                <span className="text-white text-xs font-extrabold">🏏 타자 스탯</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <tbody>
-                    {batterStats.map(([key, label, unit]) => (
+                    {BATTER_STATS.map(([key, label]) => (
                       <tr key={key} className="border-b border-gray-50 even:bg-gray-50/50">
                         <td className="p-2 text-gray-500 font-bold w-16">{label}</td>
                         {selected.map((p, i) => p && (
                           <td key={i} className="p-2 text-center font-bold text-navy">
-                            {p.position !== "투수" ? (p[key] != null ? p[key]+(unit?" "+unit:"") : "-") : <span className="text-gray-300">N/A</span>}
+                            {p.position !== "투수"
+                              ? <span className={getStat(p,key) !== "-" ? "text-navy" : "text-gray-300"}>{getStat(p, key)}</span>
+                              : <span className="text-gray-300">N/A</span>}
                           </td>
                         ))}
                       </tr>

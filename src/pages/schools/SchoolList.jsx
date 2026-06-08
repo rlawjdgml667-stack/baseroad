@@ -1,16 +1,18 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import SchoolCard from "../../components/school/SchoolCard";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Search } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 const REGIONS = ["전체","서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 const LEVELS = [{ v:"all",l:"전체" },{ v:"little",l:"리틀" },{ v:"elementary",l:"초등" },{ v:"middle",l:"중등" },{ v:"high",l:"고등" },{ v:"college",l:"대학" }];
 
 export default function SchoolList() {
+  const [searchParams] = useSearchParams();
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [region, setRegion] = useState("전체");
+  const [region, setRegion] = useState(searchParams.get("region") || "전체");
   const [level, setLevel] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -22,9 +24,10 @@ export default function SchoolList() {
   }, []);
 
   const filtered = schools.filter(s => {
-    if (region !== "전체" && !s.region.includes(region)) return false;
+    const sr = s.region || "";
+    if (region !== "전체" && !sr.includes(region)) return false;
     if (level !== "all" && s.level !== level) return false;
-    if (search && !s.name.includes(search) && !(s.director_name||"").includes(search)) return false;
+    if (search && !(s.name||"").includes(search) && !(s.director_name||"").includes(search)) return false;
     return true;
   });
 
