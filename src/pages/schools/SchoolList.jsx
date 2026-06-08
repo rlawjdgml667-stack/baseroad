@@ -5,7 +5,7 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Search } from "lucide-react";
 
 const REGIONS = ["전체","서울","경기","인천","강원","충청","전라","경상","제주"];
-const LEVELS = [{ v:"all",l:"전체" },{ v:"elementary",l:"초등" },{ v:"middle",l:"중등" },{ v:"high",l:"고등" },{ v:"college",l:"대학" }];
+const LEVELS = [{ v:"all",l:"전체" },{ v:"little",l:"리틀" },{ v:"elementary",l:"초등" },{ v:"middle",l:"중등" },{ v:"high",l:"고등" },{ v:"college",l:"대학" }];
 
 export default function SchoolList() {
   const [schools, setSchools] = useState([]);

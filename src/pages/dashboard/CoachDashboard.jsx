@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import ImageUpload from "../../components/ui/ImageUpload";
+import MultiImageUpload from "../../components/ui/MultiImageUpload";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
-import { Eye, Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, CheckCircle, Clock } from "lucide-react";
 
 const REGIONS = ["서울","경기","인천","강원","충청","전라","경상","제주"];
-const LEVELS = [{ value:"elementary", label:"초등" },{ value:"middle", label:"중등" },{ value:"high", label:"고등" },{ value:"college", label:"대학" }];
+const LEVELS = [{ value:"little", label:"리틀" },{ value:"elementary", label:"초등" },{ value:"middle", label:"중등" },{ value:"high", label:"고등" },{ value:"college", label:"대학" }];
+const CUR_YEAR = new Date().getFullYear();
+const SEASONS = Array.from({ length: 6 }, (_, i) => CUR_YEAR - i);
 
 export default function CoachDashboard() {
   const { user, profile } = useAuth();
@@ -17,6 +20,10 @@ export default function CoachDashboard() {
   const [tab, setTab] = useState("school");
   const [qaList, setQaList] = useState([]);
   const [answerMap, setAnswerMap] = useState({});
+  const [myPlayers, setMyPlayers] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [playerSeasons, setPlayerSeasons] = useState([]);
+  const [selectedSeason, setSelectedSeason] = useState(CUR_YEAR);
   const [stats, setStats] = useState({ favorites: 0, players: 0, qnaCount: 0 });
   const [form, setForm] = useState({
     name:"", region:"서울", level:"high", address:"",
@@ -45,6 +52,8 @@ export default function CoachDashboard() {
         });
         // Q&A 로드
         supabase.from("qna").select("*").eq("school_id", data.id).order("created_at",{ascending:false}).then(({ data: qd }) => setQaList(qd||[]));
+        // 소속 선수 로드
+        supabase.from("players").select("id,name,position,profile_image_url,stats_verified").eq("school_id", data.id).eq("status","active").then(({ data: pd }) => setMyPlayers(pd||[]));
       }
       setLoading(false);
     });
@@ -65,6 +74,25 @@ export default function CoachDashboard() {
       else { setSchool(data); toast.success("학교가 등록됐습니다!"); }
     }
     setSaving(false);
+  }
+
+  async function loadPlayerSeasons(playerId) {
+    const { data } = await supabase.from("player_season_stats").select("*").eq("player_id", playerId).order("season", {ascending:false});
+    setPlayerSeasons(data||[]);
+    if (data && data.length > 0) setSelectedSeason(data[0].season);
+  }
+
+  async function verifySeason(seasonStatId) {
+    await supabase.from("player_season_stats").update({ stats_verified: true, verified_by: user.id, verified_at: new Date().toISOString() }).eq("id", seasonStatId);
+    setPlayerSeasons(prev => prev.map(s => s.id === seasonStatId ? { ...s, stats_verified: true } : s));
+    setMyPlayers(prev => prev.map(p => p.id === selectedPlayer?.id ? { ...p, stats_verified: true } : p));
+    toast.success("인증됐습니다! ✅");
+  }
+
+  async function unverify(seasonStatId) {
+    await supabase.from("player_season_stats").update({ stats_verified: false, verified_by: null, verified_at: null }).eq("id", seasonStatId);
+    setPlayerSeasons(prev => prev.map(s => s.id === seasonStatId ? { ...s, stats_verified: false } : s));
+    toast.success("인증이 해제됐습니다");
   }
 
   async function submitAnswer(qid) {
@@ -111,7 +139,11 @@ export default function CoachDashboard() {
       )}
 
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {[["school","학교 정보"],["qa","Q&A 답변 ("+qaList.filter(q=>!q.answer).length+")"]].map(([t,l]) => (
+        {[
+          ["school","학교 정보"],
+          ["verify","선수 인증 ("+myPlayers.filter(p=>!p.stats_verified).length+")"],
+          ["qa","Q&A ("+qaList.filter(q=>!q.answer).length+")"],
+        ].map(([t,l]) => (
           <button key={t} onClick={() => setTab(t)} className={"flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition " + (tab===t ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>{l}</button>
         ))}
       </div>
@@ -139,6 +171,10 @@ export default function CoachDashboard() {
           <div>
             <label className="label">학교 대표 이미지</label>
             <ImageUpload bucket="school-images" path={user.id+"/main"} currentUrl={form.main_image_url} onUpload={url => set("main_image_url",url)} />
+          </div>
+          <div>
+            <label className="label">시설 사진 (최대 8장)</label>
+            <MultiImageUpload bucket="school-images" pathPrefix={user.id+"/facility"} currentUrls={Array.isArray(form.facility_images) ? form.facility_images : []} onUpdate={urls => set("facility_images", urls)} maxCount={8} />
           </div>
           <div>
             <label className="label">감독 프로필 사진</label>
@@ -191,6 +227,68 @@ export default function CoachDashboard() {
           <button onClick={saveSchool} disabled={saving||!form.name} className="btn-primary w-full">
             {saving ? "저장 중..." : school ? "학교 정보 저장" : "학교 등록"}
           </button>
+        </div>
+      )}
+
+      {tab === "verify" && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-400">소속 선수의 시즌 기록을 확인하고 인증해주세요.</p>
+          {myPlayers.length === 0 && <div className="card p-8 text-center text-gray-400">소속 선수가 없습니다</div>}
+          <div className="space-y-2">
+            {myPlayers.map(p => (
+              <div key={p.id}>
+                <button onClick={() => { setSelectedPlayer(selectedPlayer?.id === p.id ? null : p); if (selectedPlayer?.id !== p.id) loadPlayerSeasons(p.id); }}
+                  className={"card p-3 flex items-center gap-3 w-full text-left transition " + (selectedPlayer?.id === p.id ? "border-2 border-navy" : "")}>
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-navy/10 flex-shrink-0">
+                    {p.profile_image_url ? <img src={p.profile_image_url} className="w-full h-full object-cover" alt={p.name}/> : <div className="w-full h-full flex items-center justify-center font-bold text-navy/30">{p.name?.[0]}</div>}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-sm">{p.name}</div>
+                    <div className="text-xs text-gray-400">{p.position}</div>
+                  </div>
+                  {p.stats_verified
+                    ? <span className="flex items-center gap-1 text-xs font-bold text-green-600"><CheckCircle size={14}/> 인증</span>
+                    : <span className="flex items-center gap-1 text-xs font-bold text-orange-400"><Clock size={14}/> 미인증</span>}
+                </button>
+
+                {selectedPlayer?.id === p.id && (
+                  <div className="border border-navy/20 rounded-b-xl p-3 bg-navy/5 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-navy">시즌 선택</span>
+                      <select className="input text-xs py-1 flex-1" value={selectedSeason} onChange={e => setSelectedSeason(Number(e.target.value))}>
+                        {SEASONS.map(y => <option key={y} value={y}>{y}년</option>)}
+                      </select>
+                    </div>
+                    {(() => {
+                      const ss = playerSeasons.find(s => s.season === selectedSeason);
+                      if (!ss) return <p className="text-xs text-gray-400 text-center py-2">{selectedSeason}시즌 기록 없음</p>;
+                      const c = ss.computed_stats || {};
+                      const isPitcher = p.position === "투수";
+                      const statEntries = isPitcher
+                        ? [["방어율",c.era],["WHIP",c.whip],["탈삼진",c.k_count],["승",c.wins],["패",c.losses],["이닝",c.innings]]
+                        : [["타율",c.avg],["OPS",c.ops],["홈런",c.hr],["타점",c.rbi],["출루율",c.obp],["타수",c.ab]];
+                      return (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {statEntries.map(([l,v]) => (
+                              <div key={l} className="bg-white rounded-lg p-2 text-center">
+                                <div className="text-[10px] text-gray-400">{l}</div>
+                                <div className="text-sm font-extrabold text-navy">{v ?? "-"}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {ss.stats_verified
+                            ? <button onClick={() => unverify(ss.id)} className="w-full text-xs text-orange-400 font-bold py-1.5 border border-orange-200 rounded-lg hover:bg-orange-50">인증 해제</button>
+                            : <button onClick={() => verifySeason(ss.id)} className="btn-primary w-full text-sm py-2 flex items-center justify-center gap-1"><CheckCircle size={14}/> 기록 인증하기</button>
+                          }
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

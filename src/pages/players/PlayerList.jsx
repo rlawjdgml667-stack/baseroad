@@ -7,7 +7,7 @@ import { useSearchParams, Link } from "react-router-dom";
 
 const REGIONS = ["전체","서울","경기","인천","강원","충청","전라","경상","제주"];
 const POSITIONS = ["전체","투수","포수","내야수","외야수"];
-const GRADES = ["전체","초등","중학","고등","대학"];
+const GRADES = ["전체","리틀","초등","중학","고등","대학"];
 
 const RANKING_CONFIGS = {
   "투수": [
@@ -46,7 +46,7 @@ export default function PlayerList() {
   const filtered = players.filter(p => {
     const sr = p.schools?.region || "";
     const sl = p.schools?.level || "";
-    const levelMap = { elementary:"초등", middle:"중학", high:"고등", college:"대학" };
+    const levelMap = { little:"리틀", elementary:"초등", middle:"중학", high:"고등", college:"대학" };
     if (region !== "전체" && !sr.includes(region)) return false;
     if (position !== "전체" && p.position !== position) return false;
     if (grade !== "전체" && levelMap[sl] !== grade) return false;
@@ -54,17 +54,32 @@ export default function PlayerList() {
     return true;
   });
 
-  // 랭킹 데이터
+  // 랭킹 데이터 - player_season_stats에서 최신 시즌 기준
   const pitchers = players.filter(p => p.position === "투수");
   const batters = players.filter(p => ["포수","내야수","외야수"].includes(p.position));
   const rankPlayers = rankPos === "투수" ? pitchers : batters;
   const rankConfig = (rankPos === "투수" ? RANKING_CONFIGS["투수"] : RANKING_CONFIGS["타자"]);
   const currentRankStat = rankConfig.find(r => r.key === rankStat) || rankConfig[0];
 
-  const getStat = (p, key) => p.stats ? p.stats[key] : p[key];
+  const getStat = (p, key) => {
+    if (p.season_stats) return p.season_stats[key];
+    if (p.stats) return p.stats[key];
+    return p[key];
+  };
+
+  // 최소 기준 필터 (투수: 15이닝, 타자: 30타수)
+  const meetsMinimum = (p) => {
+    if (rankPos === "투수") {
+      const ip = Number(getStat(p, "innings") || 0);
+      return ip >= 15;
+    } else {
+      const ab = Number(getStat(p, "ab") || 0);
+      return ab >= 30;
+    }
+  };
 
   const ranked = [...rankPlayers]
-    .filter(p => getStat(p, currentRankStat.key) != null)
+    .filter(p => getStat(p, currentRankStat.key) != null && meetsMinimum(p))
     .sort((a, b) => currentRankStat.asc
       ? (Number(getStat(a, currentRankStat.key))||999) - (Number(getStat(b, currentRankStat.key))||999)
       : (Number(getStat(b, currentRankStat.key))||0) - (Number(getStat(a, currentRankStat.key))||0)
@@ -158,10 +173,17 @@ export default function PlayerList() {
             ))}
           </div>
 
+          {/* 최소 기준 안내 */}
+          <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-700">
+            {rankPos === "투수"
+              ? "⚠️ 15이닝 미만 선수는 랭킹에 표시되지 않습니다"
+              : "⚠️ 30타수 미만 선수는 랭킹에 표시되지 않습니다"}
+          </div>
+
           {loading ? <LoadingSpinner /> : ranked.length === 0 ? (
             <div className="card p-10 text-center text-gray-400">
               <Trophy size={32} className="mx-auto mb-2 text-gray-200"/>
-              <p className="text-sm">등록된 {rankPos} 데이터가 없습니다</p>
+              <p className="text-sm">기준을 충족한 {rankPos} 기록이 없습니다</p>
             </div>
           ) : (
             <div className="space-y-2">
