@@ -16,19 +16,9 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user) return;
     loadNotifications();
-    // 실시간 구독
-    const channel = supabase
-      .channel("notifications:" + user.id)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
-        filter: `user_id=eq.${user.id}`,
-      }, payload => {
-        setNotifications(prev => [payload.new, ...prev]);
-      })
-      .subscribe();
-    return () => supabase.removeChannel(channel);
+    // 30초마다 자동 새로고침
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   // 외부 클릭 닫기
