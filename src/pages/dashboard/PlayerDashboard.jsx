@@ -288,7 +288,18 @@ export default function PlayerDashboard() {
             </select>
           </div>
           <div><label className="label">자기 소개</label><textarea className="input min-h-[80px] resize-none" value={form.intro||""} onChange={e => set("intro",e.target.value)} placeholder="선수 소개, 강점 등을 적어주세요" /></div>
-          <div><label className="label">하이라이트 영상 URL (YouTube)</label><input className="input" value={form.highlight_url||""} onChange={e => set("highlight_url",e.target.value)} placeholder="https://youtube.com/..." /></div>
+          <div>
+            <label className="label">플레이 영상 URL (YouTube)</label>
+            <input className="input" value={form.highlight_url||""} onChange={e => set("highlight_url",e.target.value)} placeholder="https://youtube.com/..." />
+            <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+              <p className="font-bold">📹 YouTube 영상 업로드 방법</p>
+              <p>1. YouTube 앱 또는 youtube.com 접속</p>
+              <p>2. 우측 상단 <strong>+</strong> 버튼 → <strong>동영상 업로드</strong></p>
+              <p>3. 영상 선택 후 제목 입력 → <strong>공개</strong> 또는 <strong>일부 공개</strong> 설정</p>
+              <p>4. 업로드 완료 후 영상 주소(URL) 복사해서 위 칸에 붙여넣기</p>
+              <p className="text-amber-600 font-bold mt-1">⚠️ 본인이 직접 촬영한 영상만 업로드 가능합니다</p>
+            </div>
+          </div>
           <button onClick={saveProfile} disabled={saving||!form.name} className="btn-primary w-full">
             {saving ? "저장 중..." : playerData ? "프로필 저장" : "프로필 등록"}
           </button>
@@ -366,7 +377,7 @@ export default function PlayerDashboard() {
                   )}
                   <p className="text-xs text-gray-400 mb-3">학교명으로 검색하여 연결을 신청하세요. 해당 학교 감독/코치가 승인하면 학교 페이지에 등록됩니다.</p>
 
-                  <div className="relative">
+                  <div className="relative pb-48">
                     <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white focus-within:border-navy transition">
                       <Search size={15} className="text-gray-400 flex-shrink-0"/>
                       <input
