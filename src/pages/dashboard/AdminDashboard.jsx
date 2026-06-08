@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 const LEVEL_LABEL = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 const POSITION_LIST = ["투수","포수","내야수","외야수"];
-const REGION_LIST = ["서울","경기","인천","강원","충청","전라","경상","제주"];
+const REGION_LIST = ["서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 const ROLE_LABEL = { parent:"학부모", player:"선수", coach:"감독·코치", admin:"관리자" };
 
 export default function AdminDashboard() {

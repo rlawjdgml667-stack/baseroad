@@ -7,7 +7,7 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
 import { Heart, MessageCircle, CheckCircle, Clock, UserCheck, UserX } from "lucide-react";
 
-const REGIONS = ["서울","경기","인천","강원","충청","전라","경상","제주"];
+const REGIONS = ["서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 const LEVELS = [{ value:"little", label:"리틀" },{ value:"elementary", label:"초등" },{ value:"middle", label:"중등" },{ value:"high", label:"고등" },{ value:"college", label:"대학" }];
 const CUR_YEAR = new Date().getFullYear();
 const SEASONS = Array.from({ length: 6 }, (_, i) => CUR_YEAR - i);

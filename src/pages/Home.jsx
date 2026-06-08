@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import SchoolCard from "../components/school/SchoolCard";
 import PlayerCard from "../components/player/PlayerCard";
 
-const REGION_LIST = ["서울","경기","인천","강원","충청","전라","경상","제주"];
+const REGION_LIST = ["서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 
 export default function Home() {
   const [schools, setSchools] = useState([]);

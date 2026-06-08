@@ -5,7 +5,7 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Search, Trophy } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 
-const REGIONS = ["전체","서울","경기","인천","강원","충청","전라","경상","제주"];
+const REGIONS = ["전체","서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 const POSITIONS = ["전체","투수","포수","내야수","외야수"];
 const GRADES = ["전체","리틀","초등","중학","고등","대학"];
 

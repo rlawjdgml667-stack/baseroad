@@ -4,7 +4,7 @@ import SchoolCard from "../../components/school/SchoolCard";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Search } from "lucide-react";
 
-const REGIONS = ["전체","서울","경기","인천","강원","충청","전라","경상","제주"];
+const REGIONS = ["전체","서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 const LEVELS = [{ v:"all",l:"전체" },{ v:"little",l:"리틀" },{ v:"elementary",l:"초등" },{ v:"middle",l:"중등" },{ v:"high",l:"고등" },{ v:"college",l:"대학" }];
 
 export default function SchoolList() {
