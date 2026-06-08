@@ -24,8 +24,10 @@ export default function CoachDashboard() {
     monthly_fee:"", founded_year:"", history:"", youtube_url:"",
     has_stadium:false, has_indoor:false, has_weight:false,
     has_dormitory:false, has_pitching_machine:false, has_trainer:false,
-    bullpen_count:0, main_image_url:"",
+    bullpen_count:0, main_image_url:"", director_photo_url:"",
+    coaches:[],
   });
+  const [newCoach, setNewCoach] = useState({ name:"", role:"코치", career:"", photo_url:"" });
 
   useEffect(() => {
     if (profile?.status === "pending") { setLoading(false); return; }
@@ -135,8 +137,44 @@ export default function CoachDashboard() {
           <div><label className="label">학교 소개</label><textarea className="input min-h-[80px] resize-none" value={form.history||""} onChange={e => set("history",e.target.value)} /></div>
           <div><label className="label">유튜브 URL</label><input className="input" value={form.youtube_url||""} onChange={e => set("youtube_url",e.target.value)} placeholder="https://youtube.com/..." /></div>
           <div>
-            <label className="label">대표 이미지</label>
+            <label className="label">학교 대표 이미지</label>
             <ImageUpload bucket="school-images" path={user.id+"/main"} currentUrl={form.main_image_url} onUpload={url => set("main_image_url",url)} />
+          </div>
+          <div>
+            <label className="label">감독 프로필 사진</label>
+            <ImageUpload bucket="school-images" path={user.id+"/director"} currentUrl={form.director_photo_url} onUpload={url => set("director_photo_url",url)} />
+          </div>
+          <div>
+            <label className="label">코치 스태프 등록</label>
+            <div className="space-y-2 mb-2">
+              {(form.coaches||[]).map((c, i) => (
+                <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-navy/10 flex-shrink-0">
+                    {c.photo_url ? <img src={c.photo_url} className="w-full h-full object-cover" alt={c.name}/> : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-navy/30">{c.name?.[0]}</div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold truncate">{c.name}</div>
+                    <div className="text-xs text-gray-400">{c.role} {c.career ? "· "+c.career : ""}</div>
+                  </div>
+                  <button onClick={() => set("coaches", form.coaches.filter((_,j) => j !== i))} className="text-xs text-red-400 font-bold hover:text-red-600">삭제</button>
+                </div>
+              ))}
+            </div>
+            <div className="border border-dashed border-gray-200 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-bold text-gray-500">코치 추가</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input className="input text-sm" placeholder="이름 *" value={newCoach.name} onChange={e => setNewCoach(c=>({...c,name:e.target.value}))} />
+                <select className="input text-sm" value={newCoach.role} onChange={e => setNewCoach(c=>({...c,role:e.target.value}))}>
+                  {["코치","배터리코치","내야코치","외야코치","타격코치","트레이너"].map(r => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+              <input className="input text-sm" placeholder="경력 (예: 전 OO고 코치)" value={newCoach.career} onChange={e => setNewCoach(c=>({...c,career:e.target.value}))} />
+              <div>
+                <label className="label text-[10px]">코치 사진</label>
+                <ImageUpload bucket="school-images" path={user.id+"/coach-"+Date.now()} currentUrl={newCoach.photo_url} onUpload={url => setNewCoach(c=>({...c,photo_url:url}))} />
+              </div>
+              <button disabled={!newCoach.name.trim()} onClick={() => { set("coaches",[...(form.coaches||[]),{...newCoach}]); setNewCoach({name:"",role:"코치",career:"",photo_url:""}); }} className="btn-outline text-xs py-1.5 w-full">코치 추가</button>
+            </div>
           </div>
           <div>
             <label className="label">시설 현황</label>

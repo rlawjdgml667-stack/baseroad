@@ -11,16 +11,16 @@ const GRADES = ["전체","초등","중학","고등","대학"];
 
 const RANKING_CONFIGS = {
   "투수": [
-    { key:"era", label:"방어율", unit:"", asc:true, desc:"낮을수록 좋음" },
+    { key:"era", label:"방어율", unit:"", asc:true },
     { key:"wins", label:"승", unit:"승", asc:false },
-    { key:"strikeouts", label:"탈삼진", unit:"K", asc:false },
-    { key:"innings_pitched", label:"이닝", unit:"이닝", asc:false },
+    { key:"k_count", label:"탈삼진", unit:"K", asc:false },
+    { key:"innings", label:"이닝", unit:"이닝", asc:false },
   ],
   "타자": [
-    { key:"batting_avg", label:"타율", unit:"", asc:false },
-    { key:"home_runs", label:"홈런", unit:"HR", asc:false },
+    { key:"avg", label:"타율", unit:"", asc:false },
+    { key:"hr", label:"홈런", unit:"HR", asc:false },
     { key:"rbi", label:"타점", unit:"타점", asc:false },
-    { key:"hits", label:"안타", unit:"안타", asc:false },
+    { key:"ops", label:"OPS", unit:"", asc:false },
   ],
 };
 
@@ -61,11 +61,13 @@ export default function PlayerList() {
   const rankConfig = (rankPos === "투수" ? RANKING_CONFIGS["투수"] : RANKING_CONFIGS["타자"]);
   const currentRankStat = rankConfig.find(r => r.key === rankStat) || rankConfig[0];
 
+  const getStat = (p, key) => p.stats ? p.stats[key] : p[key];
+
   const ranked = [...rankPlayers]
-    .filter(p => p[currentRankStat.key] != null)
+    .filter(p => getStat(p, currentRankStat.key) != null)
     .sort((a, b) => currentRankStat.asc
-      ? (a[currentRankStat.key]||999) - (b[currentRankStat.key]||999)
-      : (b[currentRankStat.key]||0) - (a[currentRankStat.key]||0)
+      ? (Number(getStat(a, currentRankStat.key))||999) - (Number(getStat(b, currentRankStat.key))||999)
+      : (Number(getStat(b, currentRankStat.key))||0) - (Number(getStat(a, currentRankStat.key))||0)
     )
     .slice(0, 20);
 
@@ -179,7 +181,7 @@ export default function PlayerList() {
                     <div className="text-xs text-gray-400">{p.position} · {p.schools?.name}</div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-lg font-extrabold text-navy">{p[currentRankStat.key]}</div>
+                    <div className="text-lg font-extrabold text-navy">{getStat(p, currentRankStat.key)}</div>
                     <div className="text-[10px] text-gray-400">{currentRankStat.label}</div>
                   </div>
                 </Link>
