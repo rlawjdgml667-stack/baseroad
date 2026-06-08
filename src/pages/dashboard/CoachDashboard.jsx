@@ -18,13 +18,11 @@ export default function CoachDashboard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("school");
-  const [qaList, setQaList] = useState([]);
-  const [answerMap, setAnswerMap] = useState({});
   const [myPlayers, setMyPlayers] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [playerSeasons, setPlayerSeasons] = useState([]);
   const [selectedSeason, setSelectedSeason] = useState(CUR_YEAR);
-  const [stats, setStats] = useState({ favorites: 0, players: 0, qnaCount: 0 });
+  const [stats, setStats] = useState({ favorites: 0, players: 0 });
   const [connectionRequests, setConnectionRequests] = useState([]);
   const [form, setForm] = useState({
     name:"", region:"서울", level:"high", address:"",
@@ -47,12 +45,9 @@ export default function CoachDashboard() {
         Promise.all([
           supabase.from("favorites").select("id", {count:"exact",head:true}).eq("target_id",data.id).eq("target_type","school"),
           supabase.from("players").select("id", {count:"exact",head:true}).eq("school_id",data.id),
-          supabase.from("qna").select("id", {count:"exact",head:true}).eq("school_id",data.id),
-        ]).then(([fav, pl, qna]) => {
-          setStats({ favorites: fav.count||0, players: pl.count||0, qnaCount: qna.count||0 });
+        ]).then(([fav, pl]) => {
+          setStats({ favorites: fav.count||0, players: pl.count||0 });
         });
-        // Q&A 로드
-        supabase.from("qna").select("*").eq("school_id", data.id).order("created_at",{ascending:false}).then(({ data: qd }) => setQaList(qd||[]));
         // 소속 선수 로드
         supabase.from("players").select("id,name,position,profile_image_url,stats_verified").eq("school_id", data.id).eq("status","active").then(({ data: pd }) => setMyPlayers(pd||[]));
         // 연결 요청 로드
@@ -159,14 +154,6 @@ export default function CoachDashboard() {
     await supabase.from("player_season_stats").update({ stats_verified: false, verified_by: null, verified_at: null }).eq("id", seasonStatId);
     setPlayerSeasons(prev => prev.map(s => s.id === seasonStatId ? { ...s, stats_verified: false } : s));
     toast.success("인증이 해제됐습니다");
-  }
-
-  async function submitAnswer(qid) {
-    const ans = answerMap[qid];
-    if (!ans?.trim()) return;
-    await supabase.from("qna").update({ answer: ans }).eq("id", qid);
-    setQaList(prev => prev.map(q => q.id === qid ? { ...q, answer: ans } : q));
-    toast.success("답변이 등록됐습니다");
   }
 
   if (loading) return <LoadingSpinner />;

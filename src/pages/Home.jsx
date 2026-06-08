@@ -107,11 +107,11 @@ export default function Home() {
             <div className="text-xs text-gray-400">포지션별 랭킹</div>
           </div>
         </Link>
-        <Link to="/register" className="card p-4 flex items-center gap-3 hover:shadow-md transition">
-          <span className="text-2xl">📝</span>
+        <Link to="/community" className="card p-4 flex items-center gap-3 hover:shadow-md transition">
+          <span className="text-2xl">💬</span>
           <div>
-            <div className="font-extrabold text-sm text-navy">선수 등록</div>
-            <div className="text-xs text-gray-400">내 프로필 등록하기</div>
+            <div className="font-extrabold text-sm text-navy">커뮤니티</div>
+            <div className="text-xs text-gray-400">자유롭게 소통하기</div>
           </div>
         </Link>
       </div>
@@ -149,7 +149,7 @@ export default function Home() {
           {[
             { icon:"👨‍👩‍👦", title:"학부모", desc:"학교 정보 비교·분석", to:"/schools" },
             { icon:"⚾", title:"선수", desc:"내 프로필 등록 및 공개", to:"/players" },
-            { icon:"🏫", title:"감독·코치", desc:"학교 정보 등록 관리", to:"/register" },
+            { icon:"🏫", title:"감독·코치", desc:"학교 정보 등록 관리", to:"/dashboard/coach" },
           ].map(item => (
             <Link key={item.title} to={item.to} className="card p-3 text-center hover:shadow-md transition">
               <div className="text-3xl mb-1">{item.icon}</div>
