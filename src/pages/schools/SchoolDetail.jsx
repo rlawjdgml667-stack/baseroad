@@ -4,7 +4,6 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import FacilityBadge from "../../components/school/FacilityBadge";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
-import Modal from "../../components/ui/Modal";
 import PlayerCard from "../../components/player/PlayerCard";
 import { Heart, MapPin, Phone, Mail, ChevronLeft } from "lucide-react";
 import toast from "react-hot-toast";
@@ -20,21 +19,16 @@ export default function SchoolDetail() {
   const { user, profile } = useAuth();
   const [school, setSchool] = useState(null);
   const [players, setPlayers] = useState([]);
-  const [qna, setQna] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
-  const [qaModal, setQaModal] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [sending, setSending] = useState(false);
   const [imgIdx, setImgIdx] = useState(null);
 
   useEffect(() => {
     Promise.all([
       supabase.from("schools").select("*").eq("id", id).single(),
       supabase.from("players").select("*, schools(name)").eq("school_id", id).eq("status","active"),
-      supabase.from("qna").select("*, profiles(name)").eq("school_id", id).order("created_at",{ascending:false}),
-    ]).then(([s, p, q]) => {
-      setSchool(s.data); setPlayers(p.data||[]); setQna(q.data||[]); setLoading(false);
+    ]).then(([s, p]) => {
+      setSchool(s.data); setPlayers(p.data||[]); setLoading(false);
     });
     if (user) {
       supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","school").eq("target_id", id).single()
@@ -53,17 +47,7 @@ export default function SchoolDetail() {
     }
   }
 
-  async function submitQ() {
-    if (!question.trim()) return;
-    setSending(true);
-    await supabase.from("qna").insert({ user_id: user.id, school_id: id, question });
-    const { data } = await supabase.from("qna").select("*, profiles(name)").eq("school_id", id).order("created_at",{ascending:false});
-    setQna(data||[]);
-    setQuestion(""); setQaModal(false); setSending(false);
-    toast.success("질문이 등록되었습니다");
-  }
-
-  if (loading) return <LoadingSpinner />;
+if (loading) return <LoadingSpinner />;
   if (!school) return <div className="text-center py-20 text-gray-400">학교를 찾을 수 없습니다</div>;
 
   const ytId = extractYtId(school.youtube_url);
@@ -195,53 +179,27 @@ export default function SchoolDetail() {
         </div>
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="section-title mb-0">진학 Q&A</h2>
-          {user && profile?.role === "parent" && (
-            <button onClick={() => setQaModal(true)} className="btn-primary text-xs py-1.5 px-3">질문하기</button>
-          )}
-        </div>
-        <div className="space-y-2.5">
-          {qna.length === 0 && <div className="card p-6 text-center text-gray-400 text-sm">아직 질문이 없습니다</div>}
-          {qna.map(q => (
-            <div key={q.id} className="card overflow-hidden">
-              <div className="p-4">
-                <div className="flex gap-2 items-center mb-2">
-                  <span className="badge-navy text-[10px]">질문</span>
-                  <span className="text-xs text-gray-400">{q.profiles?.name||"익명"} · {new Date(q.created_at).toLocaleDateString("ko")}</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-800">{q.question}</p>
-              </div>
-              {q.answer ? (
-                <div className="px-4 pb-4 pt-3 bg-blue-50 border-t border-blue-100">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-xs font-bold text-navy">{school.name} 공식 답변</span>
-                    <span className="text-xs text-gray-400 ml-auto">{new Date(q.updated_at).toLocaleDateString("ko")}</span>
-                  </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{q.answer}</p>
-                </div>
-              ) : (
-                <div className="px-4 pb-3 pt-2 bg-gray-50 border-t border-gray-100">
-                  <p className="text-xs text-gray-400 text-center">학교 측 답변 대기 중</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <Modal open={qaModal} onClose={() => setQaModal(false)} title="진학 질문 등록">
-        <div className="space-y-3">
-          <div>
-            <label className="label">질문 내용</label>
-            <textarea className="input min-h-[100px] resize-none" value={question} onChange={e => setQuestion(e.target.value)} placeholder="궁금한 점을 자세히 적어주세요." />
+      {/* 문의 안내 */}
+      {(school.contact_phone || school.contact_email) && (
+        <div className="card p-4">
+          <h2 className="section-title">입단 문의</h2>
+          <p className="text-xs text-gray-400 mb-3">아래 연락처로 직접 문의해주세요</p>
+          <div className="flex flex-col gap-2">
+            {school.contact_phone && (
+              <a href={"tel:"+school.contact_phone} className="flex items-center gap-3 bg-navy/5 rounded-xl px-4 py-3 hover:bg-navy/10 transition">
+                <Phone size={16} className="text-navy flex-shrink-0"/>
+                <span className="font-bold text-navy text-sm">{school.contact_phone}</span>
+              </a>
+            )}
+            {school.contact_email && (
+              <a href={"mailto:"+school.contact_email} className="flex items-center gap-3 bg-navy/5 rounded-xl px-4 py-3 hover:bg-navy/10 transition">
+                <Mail size={16} className="text-navy flex-shrink-0"/>
+                <span className="font-bold text-navy text-sm">{school.contact_email}</span>
+              </a>
+            )}
           </div>
-          <button className="btn-primary w-full" onClick={submitQ} disabled={sending || !question.trim()}>
-            {sending ? "등록 중..." : "질문 등록"}
-          </button>
         </div>
-      </Modal>
+      )}
 
       {imgIdx !== null && (
         <div className="fixed inset-0 bg-black/90 z-[300] flex items-center justify-center p-4" onClick={() => setImgIdx(null)}>

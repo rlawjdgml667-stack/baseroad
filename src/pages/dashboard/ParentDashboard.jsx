@@ -15,7 +15,6 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
   const [favSchools, setFavSchools] = useState([]);
   const [favPlayers, setFavPlayers] = useState([]);
-  const [myQna, setMyQna] = useState([]);
   const [tab, setTab] = useState("schools");
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState([]);
@@ -24,8 +23,7 @@ export default function ParentDashboard() {
     Promise.all([
       supabase.from("favorites").select("target_id").eq("user_id",user.id).eq("target_type","school"),
       supabase.from("favorites").select("target_id").eq("user_id",user.id).eq("target_type","player"),
-      supabase.from("qna").select("*, schools(name)").eq("user_id",user.id).order("created_at",{ascending:false}),
-    ]).then(async ([fs, fp, qna]) => {
+    ]).then(async ([fs, fp]) => {
       const sIds = (fs.data||[]).map(f => f.target_id);
       const pIds = (fp.data||[]).map(f => f.target_id);
       const [sRes, pRes] = await Promise.all([
@@ -34,7 +32,6 @@ export default function ParentDashboard() {
       ]);
       setFavSchools(sRes.data||[]);
       setFavPlayers(pRes.data||[]);
-      setMyQna(qna.data||[]);
       setLoading(false);
     });
   }, [user]);
@@ -49,7 +46,6 @@ export default function ParentDashboard() {
   const tabs = [
     ["schools","관심 학교 ("+favSchools.length+")"],
     ["players","관심 선수 ("+favPlayers.length+")"],
-    ["qna","내 Q&A ("+myQna.length+")"],
   ];
 
   const compareSchools = favSchools.filter(s => compareIds.includes(s.id));
@@ -58,7 +54,7 @@ export default function ParentDashboard() {
     <div className="space-y-4">
       <h1 className="text-xl font-extrabold text-navy">학부모 대시보드</h1>
 
-      <div className="grid grid-cols-3 gap-2 text-center">
+      <div className="grid grid-cols-2 gap-2 text-center">
         <div className="card p-3">
           <div className="text-2xl font-extrabold text-red-400">{favSchools.length}</div>
           <div className="text-xs text-gray-500">관심 학교</div>
@@ -66,10 +62,6 @@ export default function ParentDashboard() {
         <div className="card p-3">
           <div className="text-2xl font-extrabold text-gold">{favPlayers.length}</div>
           <div className="text-xs text-gray-500">관심 선수</div>
-        </div>
-        <div className="card p-3">
-          <div className="text-2xl font-extrabold text-blue-500">{myQna.length}</div>
-          <div className="text-xs text-gray-500">내 질문</div>
         </div>
       </div>
 
@@ -193,26 +185,6 @@ export default function ParentDashboard() {
             </div>
       )}
 
-      {tab === "qna" && (
-        myQna.length === 0
-          ? <div className="card p-10 text-center text-gray-400">등록한 질문이 없습니다</div>
-          : <div className="space-y-2.5">
-              {myQna.map(q => (
-                <div key={q.id} className="card overflow-hidden">
-                  <div className="p-4">
-                    <div className="flex gap-2 items-center mb-2">
-                      <span className="badge-navy text-[10px]">{q.schools?.name}</span>
-                      <span className="text-xs text-gray-400">{new Date(q.created_at).toLocaleDateString("ko")}</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-800">{q.question}</p>
-                  </div>
-                  {q.answer
-                    ? <div className="px-4 pb-4 pt-3 bg-blue-50 border-t border-blue-100"><p className="text-xs font-bold text-navy mb-1">공식 답변</p><p className="text-sm text-gray-700">{q.answer}</p></div>
-                    : <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-center text-xs text-gray-400">답변 대기 중</div>}
-                </div>
-              ))}
-            </div>
-      )}
     </div>
   );
 }
