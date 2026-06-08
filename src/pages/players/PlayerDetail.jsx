@@ -22,17 +22,34 @@ export default function PlayerDetail() {
   const [isFav, setIsFav] = useState(false);
   const [seasons, setSeasons] = useState([]);
   const [selSeason, setSelSeason] = useState(CUR_YEAR);
+  const [relatedPlayers, setRelatedPlayers] = useState([]);
 
   useEffect(() => {
     Promise.all([
       supabase.from("players").select("*, schools(name, region, level)").eq("id", id).single(),
       supabase.from("player_season_stats").select("*").eq("player_id", id).order("season", { ascending: false }),
-    ]).then(([p, s]) => {
-      setPlayer(p.data);
+    ]).then(async ([p, s]) => {
+      const playerData = p.data;
+      setPlayer(playerData);
       const sd = s.data || [];
       setSeasons(sd);
       if (sd.length > 0) setSelSeason(sd[0].season);
       setLoading(false);
+      // 관련 선수 로드 (같은 학교 or 같은 포지션)
+      if (playerData) {
+        let query = supabase.from("players").select("id,name,position,profile_image_url,schools(name)").eq("status","active").neq("id", id).limit(4);
+        if (playerData.school_id) {
+          query = query.eq("school_id", playerData.school_id);
+        } else {
+          query = query.eq("position", playerData.position);
+        }
+        const { data: rel } = await query;
+        if (rel && rel.length > 0) { setRelatedPlayers(rel); }
+        else if (playerData.position) {
+          const { data: rel2 } = await supabase.from("players").select("id,name,position,profile_image_url,schools(name)").eq("status","active").eq("position", playerData.position).neq("id", id).limit(4);
+          setRelatedPlayers(rel2||[]);
+        }
+      }
     });
     if (user) {
       supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","player").eq("target_id", id).single()
@@ -154,6 +171,26 @@ export default function PlayerDetail() {
       ) : (
         <div className="card p-6 text-center text-gray-400">
           <p className="text-sm">등록된 시즌 기록이 없습니다</p>
+        </div>
+      )}
+
+      {/* 관련 선수 추천 */}
+      {relatedPlayers.length > 0 && (
+        <div>
+          <h2 className="section-title">{player.school_id ? "같은 학교 선수" : "같은 포지션 선수"}</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {relatedPlayers.map(p => (
+              <Link key={p.id} to={"/players/"+p.id} className="card p-3 flex items-center gap-2 hover:shadow-md transition">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-navy/10 flex-shrink-0">
+                  {p.profile_image_url ? <img src={p.profile_image_url} className="w-full h-full object-cover" alt={p.name}/> : <div className="w-full h-full flex items-center justify-center font-bold text-navy/30 text-sm">{p.name?.[0]}</div>}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm truncate">{p.name}</div>
+                  <div className="text-[10px] text-gray-400">{p.position}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

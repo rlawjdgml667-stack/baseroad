@@ -47,6 +47,9 @@ export default function PlayerList() {
   const [rankStat, setRankStat] = useState("era");
   const [rankGrade, setRankGrade] = useState("전체");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [rankSeason, setRankSeason] = useState(new Date().getFullYear());
+  const [availableSeasons, setAvailableSeasons] = useState([]);
+  const [allStatsData, setAllStatsData] = useState([]);
 
   useEffect(() => {
     async function load() {
@@ -62,13 +65,20 @@ export default function PlayerList() {
         return;
       }
 
-      // 각 선수의 최신 시즌 기록 조회 (인증된 것 우선, 없으면 최신)
+      // 각 선수의 전체 시즌 기록 조회
       const playerIds = playersData.map(p => p.id);
       const { data: statsData } = await supabase
         .from("player_season_stats")
         .select("player_id, season, computed_stats, raw_stats, stats_verified")
         .in("player_id", playerIds)
         .order("season", { ascending: false });
+
+      setAllStatsData(statsData || []);
+
+      // 사용 가능한 시즌 목록
+      const seasons = [...new Set((statsData || []).map(s => s.season))].sort((a,b) => b - a);
+      setAvailableSeasons(seasons);
+      if (seasons.length > 0) setRankSeason(seasons[0]);
 
       // 각 선수별 최신 기록 매핑 (인증된 것 우선)
       const statsMap = {};
@@ -106,17 +116,25 @@ export default function PlayerList() {
   const rankConfig = rankPos === "투수" ? RANKING_CONFIGS["투수"] : RANKING_CONFIGS["타자"];
   const currentRankStat = rankConfig.find(r => r.key === rankStat) || rankConfig[0];
 
-  const getStat = (p, key) => p.latestStats?.computed_stats?.[key];
+  // 선택 시즌 기록 맵
+  const seasonStatsMap = {};
+  allStatsData.filter(s => s.season === rankSeason).forEach(s => {
+    if (!seasonStatsMap[s.player_id]) seasonStatsMap[s.player_id] = s;
+    else if (s.stats_verified && !seasonStatsMap[s.player_id].stats_verified) seasonStatsMap[s.player_id] = s;
+  });
+
+  const getStat = (p, key) => seasonStatsMap[p.id]?.computed_stats?.[key];
+  const getSeasonStats = (p) => seasonStatsMap[p.id];
 
   const meetsMinimum = (p) => {
+    const raw = getSeasonStats(p)?.raw_stats;
     if (rankPos === "투수") {
-      const raw = p.latestStats?.raw_stats;
       if (!raw?.ip) return false;
       const parts = String(raw.ip).split(".");
       const ip = (parseInt(parts[0])||0) + (parseInt(parts[1]||0))/3;
       return ip >= 15;
     } else {
-      return Number(p.latestStats?.raw_stats?.ab || 0) >= 30;
+      return Number(raw?.ab || 0) >= 30;
     }
   };
 
@@ -128,7 +146,7 @@ export default function PlayerList() {
   });
 
   const ranked = [...rankPlayers]
-    .filter(p => getStat(p, currentRankStat.key) != null && meetsMinimum(p) && (!verifiedOnly || p.latestStats?.stats_verified))
+    .filter(p => getStat(p, currentRankStat.key) != null && meetsMinimum(p) && (!verifiedOnly || getSeasonStats(p)?.stats_verified))
     .sort((a, b) => currentRankStat.asc
       ? (Number(getStat(a, currentRankStat.key))||999) - (Number(getStat(b, currentRankStat.key))||999)
       : (Number(getStat(b, currentRankStat.key))||0) - (Number(getStat(a, currentRankStat.key))||0))
@@ -206,6 +224,22 @@ export default function PlayerList() {
       {/* ===== 랭킹 탭 ===== */}
       {tab === "ranking" && (
         <div className="space-y-3">
+          {/* 시즌 선택 */}
+          {availableSeasons.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 flex-shrink-0">시즌</span>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {availableSeasons.map(y => (
+                  <button key={y} onClick={() => setRankSeason(y)}
+                    className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " +
+                      (rankSeason === y ? "bg-gold text-white border-gold" : "bg-white text-gray-600 border-gray-200")}>
+                    {y}년
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 투수/타자 */}
           <div className="flex gap-2">
             {["투수","타자"].map(pos => (
@@ -275,7 +309,7 @@ export default function PlayerList() {
                       {p.schools?.name ? ` · ${p.schools.name}` : ""}
                       {p.schools?.level ? ` · ${LEVEL_LABEL[p.schools.level]||""}` : ""}
                     </div>
-                    {p.latestStats?.stats_verified && (
+                    {getSeasonStats(p)?.stats_verified && (
                       <span className="text-[10px] text-green-600 font-bold">✅ 인증</span>
                     )}
                   </div>

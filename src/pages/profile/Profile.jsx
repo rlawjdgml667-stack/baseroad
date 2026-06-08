@@ -15,6 +15,8 @@ export default function Profile() {
   const [favSchools, setFavSchools] = useState([]);
   const [favPlayers, setFavPlayers] = useState([]);
   const [favLoading, setFavLoading] = useState(false);
+  const [myPosts, setMyPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(false);
 
   // 비밀번호 변경
   const [showPwForm, setShowPwForm] = useState(false);
@@ -34,7 +36,15 @@ export default function Profile() {
 
   useEffect(() => {
     if (tab === "favorites" && user) loadFavorites();
+    if (tab === "posts" && user) loadMyPosts();
   }, [tab, user]);
+
+  async function loadMyPosts() {
+    setPostsLoading(true);
+    const { data } = await supabase.from("posts").select("id,title,category,view_count,created_at").eq("user_id", user.id).order("created_at", { ascending: false });
+    setMyPosts(data || []);
+    setPostsLoading(false);
+  }
 
   // 선수이면 현재 status 로드
   useEffect(() => {
@@ -186,7 +196,7 @@ export default function Profile() {
 
         {/* 탭 */}
         <div className="flex gap-2 border-t border-gray-100 pt-4">
-          {[["info","내 정보"],["favorites","관심 목록 ❤️"]].map(([t,l]) => (
+          {[["info","내 정보"],["favorites","관심 목록 ❤️"],["posts","내 글 💬"]].map(([t,l]) => (
             <button key={t} onClick={() => setTab(t)}
               className={"flex-1 py-2 text-xs font-bold rounded-lg transition " + (tab===t ? "bg-navy text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
               {l}
@@ -340,6 +350,34 @@ export default function Profile() {
               </div>
             }
           </div>
+        </div>
+      )}
+
+      {/* 내 글 탭 */}
+      {tab === "posts" && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-extrabold text-navy">💬 내가 쓴 글 ({myPosts.length})</h3>
+          {postsLoading && <div className="card p-6 text-center text-gray-400 text-sm">불러오는 중...</div>}
+          {!postsLoading && myPosts.length === 0 && (
+            <div className="card p-8 text-center text-gray-400">
+              <p className="text-sm">아직 작성한 글이 없어요</p>
+              <Link to="/community/write" className="text-navy font-bold text-xs mt-2 inline-block hover:underline">첫 글 쓰러 가기 →</Link>
+            </div>
+          )}
+          {myPosts.map(post => (
+            <Link key={post.id} to={"/community/"+post.id} className="card p-3 block hover:shadow-md transition">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full " + (post.category === "공지" ? "bg-red-100 text-red-600" : post.category === "질문" ? "bg-blue-100 text-blue-600" : post.category === "정보공유" ? "bg-green-100 text-green-700" : post.category === "진학상담" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600")}>
+                  {post.category}
+                </span>
+                <span className="font-bold text-sm truncate flex-1">{post.title}</span>
+              </div>
+              <div className="text-[11px] text-gray-400 flex items-center gap-2">
+                <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
+                <span>· 조회 {post.view_count}</span>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </div>

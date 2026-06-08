@@ -36,6 +36,10 @@ export default function CommunityDetail() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { loadPost(); }, [id]);
 
@@ -87,6 +91,16 @@ export default function CommunityDetail() {
     setCommentText("");
   }
 
+  async function saveEdit() {
+    if (!editTitle.trim() || !editContent.trim()) { toast.error("제목과 내용을 입력해주세요"); return; }
+    setSaving(true);
+    await supabase.from("posts").update({ title: editTitle.trim(), content: editContent.trim(), updated_at: new Date().toISOString() }).eq("id", id);
+    setPost(prev => ({ ...prev, title: editTitle.trim(), content: editContent.trim() }));
+    setEditing(false);
+    setSaving(false);
+    toast.success("수정됐습니다!");
+  }
+
   async function deletePost() {
     if (!confirm("게시글을 삭제하시겠습니까?")) return;
     await supabase.from("posts").delete().eq("id", id);
@@ -131,12 +145,31 @@ export default function CommunityDetail() {
           <span>·</span>
           <span>{timeAgo(post.created_at)}</span>
           {(isOwner || isAdmin) && (
-            <button onClick={deletePost} className="ml-auto text-red-400 hover:text-red-600 flex items-center gap-1">
-              <Trash2 size={12}/> 삭제
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              {isOwner && !editing && (
+                <button onClick={() => { setEditing(true); setEditTitle(post.title); setEditContent(post.content); }}
+                  className="text-navy/60 hover:text-navy flex items-center gap-1 text-[11px] font-bold">
+                  ✏️ 수정
+                </button>
+              )}
+              <button onClick={deletePost} className="text-red-400 hover:text-red-600 flex items-center gap-1 text-[11px] font-bold">
+                <Trash2 size={12}/> 삭제
+              </button>
+            </div>
           )}
         </div>
-        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{post.content}</p>
+        {editing ? (
+          <div className="space-y-2">
+            <input className="input font-bold" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="제목"/>
+            <textarea className="input min-h-[150px] resize-none text-sm" value={editContent} onChange={e => setEditContent(e.target.value)} placeholder="내용"/>
+            <div className="flex gap-2">
+              <button onClick={() => setEditing(false)} className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition">취소</button>
+              <button onClick={saveEdit} disabled={saving} className="flex-1 py-2 bg-navy text-white text-sm font-bold rounded-xl hover:bg-navy/90 transition disabled:opacity-50">{saving ? "저장 중..." : "저장"}</button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{post.content}</p>
+        )}
       </div>
 
       {/* 댓글 목록 */}

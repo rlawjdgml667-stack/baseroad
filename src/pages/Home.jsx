@@ -1,17 +1,36 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import SchoolCard from "../components/school/SchoolCard";
 import PlayerCard from "../components/player/PlayerCard";
+import { Search } from "lucide-react";
 
 const REGION_LIST = ["서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 
 export default function Home() {
+  const navigate = useNavigate();
   const [schools, setSchools] = useState([]);
   const [players, setPlayers] = useState([]);
   const [regionStats, setRegionStats] = useState([]);
   const [totalStats, setTotalStats] = useState({ schools:0, players:0 });
   const [loading, setLoading] = useState(true);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!searchQ.trim()) { setSearchResults(null); return; }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const [s, p] = await Promise.all([
+        supabase.from("schools").select("id,name,level,region").ilike("name", `%${searchQ}%`).eq("status","active").limit(5),
+        supabase.from("players").select("id,name,position,profile_image_url,schools(name)").ilike("name", `%${searchQ}%`).eq("status","active").limit(5),
+      ]);
+      setSearchResults({ schools: s.data||[], players: p.data||[] });
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQ]);
 
   useEffect(() => {
     Promise.all([
@@ -43,6 +62,61 @@ export default function Home() {
             <Link to="/players" className="btn-outline text-sm py-2 px-4 border-white text-white hover:bg-white hover:text-navy">선수 프로필 보기</Link>
           </div>
         </div>
+      </div>
+
+      {/* 통합 검색 */}
+      <div className="relative">
+        <div className="flex items-center gap-2 bg-white rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus-within:border-navy transition">
+          <Search size={16} className="text-gray-400 flex-shrink-0"/>
+          <input
+            className="flex-1 text-sm outline-none bg-transparent"
+            placeholder="학교명 또는 선수명으로 검색..."
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+          />
+          {searchQ && <button onClick={() => { setSearchQ(""); setSearchResults(null); }} className="text-gray-300 hover:text-gray-500 text-lg leading-none">×</button>}
+        </div>
+        {/* 검색 결과 드롭다운 */}
+        {searchQ && (
+          <div className="absolute left-0 right-0 top-14 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+            {searching && <div className="p-4 text-center text-sm text-gray-400">검색 중...</div>}
+            {!searching && searchResults && (
+              <>
+                {searchResults.schools.length === 0 && searchResults.players.length === 0 && (
+                  <div className="p-4 text-center text-sm text-gray-400">검색 결과가 없습니다</div>
+                )}
+                {searchResults.schools.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 text-[10px] font-extrabold text-gray-400 bg-gray-50">🏫 학교</div>
+                    {searchResults.schools.map(s => (
+                      <Link key={s.id} to={"/schools/"+s.id} onClick={() => { setSearchQ(""); setSearchResults(null); }}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-navy/5 transition border-b border-gray-50 last:border-0">
+                        <span className="text-xs font-bold text-navy">{s.name}</span>
+                        <span className="text-[10px] text-gray-400 ml-auto">{s.region}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {searchResults.players.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 text-[10px] font-extrabold text-gray-400 bg-gray-50">⚾ 선수</div>
+                    {searchResults.players.map(p => (
+                      <Link key={p.id} to={"/players/"+p.id} onClick={() => { setSearchQ(""); setSearchResults(null); }}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-navy/5 transition border-b border-gray-50 last:border-0">
+                        <div className="w-7 h-7 rounded-lg overflow-hidden bg-navy/10 flex-shrink-0">
+                          {p.profile_image_url ? <img src={p.profile_image_url} className="w-full h-full object-cover" alt={p.name}/> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-navy/30">{p.name?.[0]}</div>}
+                        </div>
+                        <span className="text-xs font-bold text-navy">{p.name}</span>
+                        <span className="text-[10px] text-gray-400">{p.position}</span>
+                        <span className="text-[10px] text-gray-400 ml-auto">{p.schools?.name||""}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 핵심 통계 */}
