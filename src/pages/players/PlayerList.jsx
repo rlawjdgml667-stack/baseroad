@@ -225,20 +225,18 @@ export default function PlayerList() {
       {tab === "ranking" && (
         <div className="space-y-3">
           {/* 시즌 선택 */}
-          {availableSeasons.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 flex-shrink-0">시즌</span>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {availableSeasons.map(y => (
-                  <button key={y} onClick={() => setRankSeason(y)}
-                    className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " +
-                      (rankSeason === y ? "bg-gold text-white border-gold" : "bg-white text-gray-600 border-gray-200")}>
-                    {y}년
-                  </button>
-                ))}
-              </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 flex-shrink-0">시즌</span>
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {(availableSeasons.length > 0 ? availableSeasons : [CUR_YEAR, CUR_YEAR-1, CUR_YEAR-2]).map(y => (
+                <button key={y} onClick={() => setRankSeason(y)}
+                  className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " +
+                    (rankSeason === y ? "bg-gold text-white border-gold" : "bg-white text-gray-600 border-gray-200")}>
+                  {y}년
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           {/* 투수/타자 */}
           <div className="flex gap-2">
