@@ -8,8 +8,10 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import SchoolList from "./pages/schools/SchoolList";
 import SchoolDetail from "./pages/schools/SchoolDetail";
+import SchoolCompare from "./pages/schools/SchoolCompare";
 import PlayerList from "./pages/players/PlayerList";
 import PlayerDetail from "./pages/players/PlayerDetail";
+import PlayerCompare from "./pages/players/PlayerCompare";
 import QABoard from "./pages/qa/QABoard";
 import Profile from "./pages/profile/Profile";
 import CoachDashboard from "./pages/dashboard/CoachDashboard";
@@ -33,8 +35,10 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/schools" element={<SchoolList />} />
+        <Route path="/schools/compare" element={<SchoolCompare />} />
         <Route path="/schools/:id" element={<SchoolDetail />} />
         <Route path="/players" element={<PlayerList />} />
+        <Route path="/players/compare" element={<PlayerCompare />} />
         <Route path="/players/:id" element={<PlayerDetail />} />
         <Route path="/qa" element={<QABoard />} />
         <Route path="/profile" element={<Profile />} />

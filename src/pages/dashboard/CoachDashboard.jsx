@@ -1,9 +1,10 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import ImageUpload from "../../components/ui/ImageUpload";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
+import { Eye, Heart, MessageCircle } from "lucide-react";
 
 const REGIONS = ["서울","경기","인천","강원","충청","전라","경상","제주"];
 const LEVELS = [{ value:"elementary", label:"초등" },{ value:"middle", label:"중등" },{ value:"high", label:"고등" },{ value:"college", label:"대학" }];
@@ -16,6 +17,7 @@ export default function CoachDashboard() {
   const [tab, setTab] = useState("school");
   const [qaList, setQaList] = useState([]);
   const [answerMap, setAnswerMap] = useState({});
+  const [stats, setStats] = useState({ favorites: 0, players: 0, qnaCount: 0 });
   const [form, setForm] = useState({
     name:"", region:"서울", level:"high", address:"",
     contact_phone:"", contact_email:"", director_name:"",
@@ -28,12 +30,22 @@ export default function CoachDashboard() {
   useEffect(() => {
     if (profile?.status === "pending") { setLoading(false); return; }
     supabase.from("schools").select("*").eq("coach_user_id", user.id).single().then(({ data }) => {
-      if (data) { setSchool(data); setForm(f => ({ ...f, ...data })); }
+      if (data) {
+        setSchool(data);
+        setForm(f => ({ ...f, ...data }));
+        // 학교 통계 로드
+        Promise.all([
+          supabase.from("favorites").select("id", {count:"exact",head:true}).eq("target_id",data.id).eq("target_type","school"),
+          supabase.from("players").select("id", {count:"exact",head:true}).eq("school_id",data.id),
+          supabase.from("qna").select("id", {count:"exact",head:true}).eq("school_id",data.id),
+        ]).then(([fav, pl, qna]) => {
+          setStats({ favorites: fav.count||0, players: pl.count||0, qnaCount: qna.count||0 });
+        });
+        // Q&A 로드
+        supabase.from("qna").select("*").eq("school_id", data.id).order("created_at",{ascending:false}).then(({ data: qd }) => setQaList(qd||[]));
+      }
       setLoading(false);
     });
-    if (profile?.school_id) {
-      supabase.from("qna").select("*").eq("school_id", profile.school_id).then(({ data }) => setQaList(data||[]));
-    }
   }, [user, profile]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -74,11 +86,34 @@ export default function CoachDashboard() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-extrabold text-navy">감독·코치 대시보드</h1>
-      <div className="flex gap-2">
-        {[["school","학교 정보"],["qa","Q&A 답변"]].map(([t,l]) => (
-          <button key={t} onClick={() => setTab(t)} className={"px-4 py-2 rounded-full text-sm font-bold border transition " + (tab===t ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>{l}</button>
+
+      {/* 학교 통계 (학교 등록된 경우) */}
+      {school && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="card p-3 text-center">
+            <Heart size={16} className="text-red-400 mx-auto mb-1"/>
+            <div className="text-xl font-extrabold text-navy">{stats.favorites}</div>
+            <div className="text-[10px] text-gray-500">관심 등록</div>
+          </div>
+          <div className="card p-3 text-center">
+            <span className="text-base block mb-1">⚾</span>
+            <div className="text-xl font-extrabold text-gold">{stats.players}</div>
+            <div className="text-[10px] text-gray-500">등록 선수</div>
+          </div>
+          <div className="card p-3 text-center">
+            <MessageCircle size={16} className="text-blue-400 mx-auto mb-1"/>
+            <div className="text-xl font-extrabold text-blue-600">{stats.qnaCount}</div>
+            <div className="text-[10px] text-gray-500">질문 수</div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {[["school","학교 정보"],["qa","Q&A 답변 ("+qaList.filter(q=>!q.answer).length+")"]].map(([t,l]) => (
+          <button key={t} onClick={() => setTab(t)} className={"flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition " + (tab===t ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>{l}</button>
         ))}
       </div>
+
       {tab === "school" && (
         <div className="card p-4 space-y-4">
           <h2 className="section-title">학교 정보 {school ? "수정" : "등록"}</h2>
@@ -120,18 +155,23 @@ export default function CoachDashboard() {
           </button>
         </div>
       )}
+
       {tab === "qa" && (
         <div className="space-y-3">
+          <p className="text-xs text-gray-400">학부모가 우리 학교에 등록한 질문입니다.</p>
           {qaList.length === 0 && <div className="card p-8 text-center text-gray-400">아직 질문이 없습니다</div>}
           {qaList.map(q => (
             <div key={q.id} className="card overflow-hidden">
               <div className="p-4">
-                <div className="flex gap-2 mb-2"><span className="badge-navy text-[10px]">질문</span><span className="text-xs text-gray-400">{new Date(q.created_at).toLocaleDateString("ko")}</span></div>
+                <div className="flex gap-2 mb-2">
+                  <span className={"badge-" + (q.answer ? "green" : "gray") + " text-[10px]"}>{q.answer ? "답변완료" : "미답변"}</span>
+                  <span className="text-xs text-gray-400">{new Date(q.created_at).toLocaleDateString("ko")}</span>
+                </div>
                 <p className="text-sm font-semibold text-gray-800">{q.question}</p>
               </div>
               {q.answer ? (
                 <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
-                  <p className="text-xs font-bold text-navy mb-1">답변 완료</p>
+                  <p className="text-xs font-bold text-navy mb-1">내 답변</p>
                   <p className="text-sm text-gray-700">{q.answer}</p>
                 </div>
               ) : (
