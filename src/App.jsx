@@ -12,7 +12,9 @@ import SchoolCompare from "./pages/schools/SchoolCompare";
 import PlayerList from "./pages/players/PlayerList";
 import PlayerDetail from "./pages/players/PlayerDetail";
 import PlayerCompare from "./pages/players/PlayerCompare";
-import QABoard from "./pages/qa/QABoard";
+import CommunityBoard from "./pages/community/CommunityBoard";
+import CommunityWrite from "./pages/community/CommunityWrite";
+import CommunityDetail from "./pages/community/CommunityDetail";
 import Profile from "./pages/profile/Profile";
 import CoachDashboard from "./pages/dashboard/CoachDashboard";
 import PlayerDashboard from "./pages/dashboard/PlayerDashboard";
@@ -42,7 +44,9 @@ export default function App() {
         <Route path="/players" element={<PlayerList />} />
         <Route path="/players/compare" element={<PlayerCompare />} />
         <Route path="/players/:id" element={<PlayerDetail />} />
-        <Route path="/qa" element={<QABoard />} />
+        <Route path="/community" element={<CommunityBoard />} />
+        <Route path="/community/write" element={<CommunityWrite />} />
+        <Route path="/community/:id" element={<CommunityDetail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/dashboard/coach" element={
           <ProtectedRoute roles={["coach","admin"]}><CoachDashboard /></ProtectedRoute>

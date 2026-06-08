@@ -1,0 +1,129 @@
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../contexts/AuthContext";
+import { PenSquare, MessageCircle, Eye, ChevronRight } from "lucide-react";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
+
+const CATEGORIES = ["전체", "자유", "질문", "정보공유", "진학상담"];
+const CAT_COLOR = {
+  자유: "bg-gray-100 text-gray-600",
+  질문: "bg-blue-100 text-blue-600",
+  정보공유: "bg-green-100 text-green-700",
+  진학상담: "bg-purple-100 text-purple-700",
+};
+
+export default function CommunityBoard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState("전체");
+
+  useEffect(() => { loadPosts(); }, [category]);
+
+  async function loadPosts() {
+    setLoading(true);
+    let query = supabase
+      .from("posts")
+      .select("id, title, category, view_count, created_at, user_id, profiles(name, role)")
+      .order("created_at", { ascending: false });
+    if (category !== "전체") query = query.eq("category", category);
+    const { data } = await query;
+    // 댓글 수 별도 조회
+    const postIds = (data || []).map(p => p.id);
+    let commentCounts = {};
+    if (postIds.length > 0) {
+      const { data: cc } = await supabase
+        .from("comments")
+        .select("post_id")
+        .in("post_id", postIds);
+      (cc || []).forEach(c => {
+        commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1;
+      });
+    }
+    setPosts((data || []).map(p => ({ ...p, commentCount: commentCounts[p.id] || 0 })));
+    setLoading(false);
+  }
+
+  const roleLabel = { player: "선수", parent: "학부모", coach: "감독", admin: "관리자" };
+  const roleBg = { player: "bg-green-100 text-green-700", parent: "bg-blue-100 text-blue-700", coach: "bg-orange-100 text-orange-700", admin: "bg-red-100 text-red-700" };
+
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "방금 전";
+    if (m < 60) return m + "분 전";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + "시간 전";
+    const d = Math.floor(h / 24);
+    if (d < 7) return d + "일 전";
+    return new Date(dateStr).toLocaleDateString("ko-KR");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-extrabold text-navy">커뮤니티 💬</h1>
+        {user && (
+          <button onClick={() => navigate("/community/write")}
+            className="flex items-center gap-1.5 bg-navy text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-navy/90 transition">
+            <PenSquare size={14}/> 글쓰기
+          </button>
+        )}
+      </div>
+
+      {/* 카테고리 필터 */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {CATEGORIES.map(c => (
+          <button key={c} onClick={() => setCategory(c)}
+            className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " +
+              (category === c ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {loading ? <LoadingSpinner /> : posts.length === 0 ? (
+        <div className="card p-12 text-center text-gray-400">
+          <MessageCircle size={32} className="mx-auto mb-2 text-gray-200"/>
+          <p className="text-sm">아직 게시글이 없어요</p>
+          {user && <button onClick={() => navigate("/community/write")} className="mt-3 text-navy text-xs font-bold underline">첫 글 작성하기</button>}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {posts.map(post => (
+            <Link key={post.id} to={"/community/" + post.id}
+              className="card p-4 block hover:shadow-md transition">
+              <div className="flex items-start gap-2 mb-2">
+                <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 " + (CAT_COLOR[post.category] || "bg-gray-100 text-gray-600")}>
+                  {post.category}
+                </span>
+                <span className="font-bold text-sm text-gray-800 line-clamp-1 flex-1">{post.title}</span>
+                <ChevronRight size={14} className="text-gray-300 flex-shrink-0 mt-0.5"/>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                <span className={"font-bold px-1.5 py-0.5 rounded-full text-[10px] " + (roleBg[post.profiles?.role] || "bg-gray-100 text-gray-500")}>
+                  {roleLabel[post.profiles?.role] || ""}
+                </span>
+                <span className="font-semibold text-gray-500">{post.profiles?.name || "익명"}</span>
+                <span>·</span>
+                <span>{timeAgo(post.created_at)}</span>
+                <span className="ml-auto flex items-center gap-2">
+                  <span className="flex items-center gap-0.5"><Eye size={11}/>{post.view_count}</span>
+                  <span className="flex items-center gap-0.5"><MessageCircle size={11}/>{post.commentCount}</span>
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {!user && (
+        <div className="card p-4 text-center text-sm text-gray-400">
+          <Link to="/login" className="text-navy font-bold hover:underline">로그인</Link>하면 글을 작성할 수 있어요
+        </div>
+      )}
+    </div>
+  );
+}

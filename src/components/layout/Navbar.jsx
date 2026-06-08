@@ -19,6 +19,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-6 text-sm font-semibold">
           <Link to="/schools" className={pathname.startsWith("/schools")?"text-gold":"hover:text-gold/80 transition"}>학교 정보</Link>
           <Link to="/players" className={pathname.startsWith("/players")?"text-gold":"hover:text-gold/80 transition"}>선수 프로필</Link>
+          <Link to="/community" className={pathname.startsWith("/community")?"text-gold":"hover:text-gold/80 transition"}>커뮤니티</Link>
           {user
             ? <>
                 <NotificationBell />
@@ -36,7 +37,7 @@ export default function Navbar() {
       </div>
       {open && (
         <div className="md:hidden bg-navy-800 border-t border-white/10">
-          {[["학교 정보","/schools"],["선수 프로필","/players"],["내 정보","/profile"]].map(([l,t]) => (
+          {[["학교 정보","/schools"],["선수 프로필","/players"],["커뮤니티","/community"],["내 정보","/profile"]].map(([l,t]) => (
             <Link key={t} to={t} onClick={() => setOpen(false)} className="block px-6 py-3 text-sm font-semibold hover:bg-white/10 transition">{l}</Link>
           ))}
         </div>

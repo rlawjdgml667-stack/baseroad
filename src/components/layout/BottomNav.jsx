@@ -1,11 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, School, Users, Trophy, User } from "lucide-react";
+import { Home, School, Users, MessageCircle, User } from "lucide-react";
 
 const navItems = [
   { to:"/", icon:Home, label:"홈" },
   { to:"/schools", icon:School, label:"학교" },
   { to:"/players", icon:Users, label:"선수" },
-  { to:"/players?tab=ranking", icon:Trophy, label:"랭킹" },
+  { to:"/community", icon:MessageCircle, label:"커뮤니티" },
   { to:"/profile", icon:User, label:"내정보" },
 ];
 
