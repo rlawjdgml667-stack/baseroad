@@ -234,7 +234,7 @@ export default function PlayerList() {
             >
               {(availableSeasons.length > 0
                 ? availableSeasons
-                : Array.from({length:20}, (_,i) => CUR_YEAR + 10 - i)
+                : Array.from({length:20}, (_,i) => CUR_YEAR + i)
               ).map(y => (
                 <option key={y} value={y}>{y}년</option>
               ))}
