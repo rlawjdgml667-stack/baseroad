@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [allProfiles, setAllProfiles] = useState([]);
   const [posts, setPosts] = useState([]);
   const [memberSearch, setMemberSearch] = useState("");
+  const [designateMap, setDesignateMap] = useState({}); // coach id → 담당자 지정 여부
 
   useEffect(() => {
     Promise.all([
@@ -35,10 +36,26 @@ export default function AdminDashboard() {
     });
   }, []);
 
-  async function approveCoach(id) {
-    await supabase.from("profiles").update({ status:"active" }).eq("id", id);
-    setPendingCoaches(prev => prev.filter(c => c.id !== id));
-    toast.success("감독·코치가 승인됐습니다");
+  async function approveCoach(coach) {
+    // 1. 코치 계정 승인
+    await supabase.from("profiles").update({ status:"active" }).eq("id", coach.id);
+
+    // 2. 담당자 지정 체크된 경우 → 해당 학교 coach_user_id 교체
+    if (designateMap[coach.id] && coach.school_name) {
+      const { data: matchedSchool } = await supabase
+        .from("schools").select("id,name").ilike("name", coach.school_name).maybeSingle();
+      if (matchedSchool) {
+        await supabase.from("schools").update({ coach_user_id: coach.id }).eq("id", matchedSchool.id);
+        toast.success(`${coach.name} 승인 + ${matchedSchool.name} 담당자로 지정됐습니다 🏫`);
+      } else {
+        toast.success(`${coach.name} 승인됐습니다 (일치하는 학교 없음 — 새 학교 등록 가능)`);
+      }
+    } else {
+      toast.success("감독·코치가 승인됐습니다");
+    }
+
+    setPendingCoaches(prev => prev.filter(c => c.id !== coach.id));
+    setDesignateMap(prev => { const n = {...prev}; delete n[coach.id]; return n; });
   }
 
   async function rejectCoach(id) {
@@ -246,8 +263,23 @@ export default function AdminDashboard() {
                   <div className="text-xs text-gray-300 mt-0.5">가입일: {new Date(c.created_at).toLocaleDateString("ko")}</div>
                 </div>
               </div>
+              {/* 담당자 지정 옵션 (학교명 입력한 경우만 표시) */}
+              {c.school_name && (
+                <label className="flex items-center gap-2 cursor-pointer bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={!!designateMap[c.id]}
+                    onChange={e => setDesignateMap(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <div>
+                    <div className="text-xs font-extrabold text-amber-700">🏫 {c.school_name} 담당자로 지정</div>
+                    <div className="text-[10px] text-amber-600">체크 시 기존 담당자 권한이 이 계정으로 이전됩니다</div>
+                  </div>
+                </label>
+              )}
               <div className="flex gap-2">
-                <button onClick={() => approveCoach(c.id)} className="btn-primary text-xs py-1.5 flex-1">✅ 승인</button>
+                <button onClick={() => approveCoach(c)} className="btn-primary text-xs py-1.5 flex-1">✅ 승인</button>
                 <button onClick={() => rejectCoach(c.id)} className="bg-red-50 text-red-500 font-bold text-xs py-1.5 px-4 rounded-lg border border-red-100 hover:bg-red-100 transition">반려</button>
               </div>
             </div>
