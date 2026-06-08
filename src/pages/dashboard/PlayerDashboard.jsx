@@ -4,14 +4,13 @@ import { supabase } from "../../lib/supabase";
 import ImageUpload from "../../components/ui/ImageUpload";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
-import { Calculator, CheckCircle, Clock } from "lucide-react";
+import { Calculator, CheckCircle, Clock, Search, X, Link2, AlertCircle } from "lucide-react";
 
 const POSITIONS = ["투수","포수","내야수","외야수"];
 const HANDS = ["우투우타","우투좌타","좌투좌타","좌투우타","스위치"];
 const CUR_YEAR = new Date().getFullYear();
 const SEASONS = Array.from({ length: 6 }, (_, i) => CUR_YEAR - i);
 
-// 이닝 파싱 (15.1 → 15.333...)
 function parseIP(ip) {
   const s = String(ip || 0);
   const parts = s.split(".");
@@ -29,24 +28,15 @@ function calcBatterStats(r) {
   const bb = Number(r.bb) || 0;
   const hbp = Number(r.hbp) || 0;
   const sf = Number(r.sf) || 0;
-
   if (ab === 0) return {};
   const avg = h / ab;
   const obp_denom = ab + bb + hbp + sf;
   const obp = obp_denom > 0 ? (h + bb + hbp) / obp_denom : 0;
   const slg = (h + dbl + 2 * tpl + 3 * hr) / ab;
   const ops = obp + slg;
-
   return {
-    avg: avg.toFixed(3),
-    obp: obp.toFixed(3),
-    slg: slg.toFixed(3),
-    ops: ops.toFixed(3),
-    hr: r.hr || 0,
-    rbi: r.rbi || 0,
-    sb: r.sb || 0,
-    ab: ab,
-    h: h,
+    avg: avg.toFixed(3), obp: obp.toFixed(3), slg: slg.toFixed(3), ops: ops.toFixed(3),
+    hr: r.hr || 0, rbi: r.rbi || 0, sb: r.sb || 0, ab, h,
   };
 }
 
@@ -56,20 +46,13 @@ function calcPitcherStats(r) {
   const ha = Number(r.ha) || 0;
   const bb = Number(r.bb) || 0;
   const k = Number(r.k) || 0;
-
   if (ipReal === 0) return {};
   const era = (er * 9) / ipReal;
   const whip = (ha + bb) / ipReal;
-
   return {
-    era: era.toFixed(2),
-    whip: whip.toFixed(2),
-    k_count: k,
-    wins: r.wins || 0,
-    losses: r.losses || 0,
-    saves: r.saves || 0,
-    innings: r.ip || 0,
-    ip_real: ipReal.toFixed(1),
+    era: era.toFixed(2), whip: whip.toFixed(2), k_count: k,
+    wins: r.wins || 0, losses: r.losses || 0, saves: r.saves || 0,
+    innings: r.ip || 0, ip_real: ipReal.toFixed(1),
   };
 }
 
@@ -86,14 +69,23 @@ const PITCHER_FIELDS = [
 export default function PlayerDashboard() {
   const { user, profile } = useAuth();
   const [playerData, setPlayerData] = useState(null);
-  const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("profile");
   const [form, setForm] = useState({
     name:"", birth_year:"", position:"투수", dominant_hand:"우투우타",
-    school_id:"", intro:"", height:"", weight:"", highlight_url:"", profile_image_url:""
+    intro:"", height:"", weight:"", highlight_url:"", profile_image_url:""
   });
+
+  // 학교 연결 관련
+  const [connectionReq, setConnectionReq] = useState(null); // 현재 연결 요청
+  const [connectedSchool, setConnectedSchool] = useState(null); // 승인된 학교
+  const [schoolSearch, setSchoolSearch] = useState("");
+  const [schoolResults, setSchoolResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  // 시즌 기록
   const [season, setSeason] = useState(CUR_YEAR);
   const [seasonStats, setSeasonStats] = useState(null);
   const [rawStats, setRawStats] = useState({});
@@ -101,32 +93,60 @@ export default function PlayerDashboard() {
   const [statSaving, setStatSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("players").select("*").eq("user_id", user.id).single(),
-      supabase.from("schools").select("id, name, level").eq("status","active"),
-    ]).then(([p, s]) => {
-      if (p.data) { setPlayerData(p.data); setForm(f => ({ ...f, ...p.data })); }
-      setSchools(s.data||[]);
-      setLoading(false);
-    });
+    loadPlayerData();
   }, [user]);
+
+  async function loadPlayerData() {
+    const { data: p } = await supabase.from("players").select("*").eq("user_id", user.id).single();
+    if (p) {
+      setPlayerData(p);
+      setForm(f => ({ ...f, ...p }));
+      // 연결 요청 로드
+      await loadConnectionStatus(p.id, p.school_id);
+    }
+    setLoading(false);
+  }
+
+  async function loadConnectionStatus(playerId, currentSchoolId) {
+    // 현재 연결된 학교
+    if (currentSchoolId) {
+      const { data: school } = await supabase.from("schools").select("id,name,level").eq("id", currentSchoolId).single();
+      setConnectedSchool(school || null);
+    } else {
+      setConnectedSchool(null);
+    }
+    // 대기 중인 요청
+    const { data: req } = await supabase
+      .from("school_connection_requests")
+      .select("*, schools(id,name,level)")
+      .eq("player_id", playerId)
+      .eq("status", "pending")
+      .maybeSingle();
+    setConnectionReq(req || null);
+  }
 
   useEffect(() => {
     if (!playerData) return;
     supabase.from("player_season_stats")
       .select("*").eq("player_id", playerData.id).eq("season", season).single()
       .then(({ data }) => {
-        if (data) {
-          setSeasonStats(data);
-          setRawStats(data.raw_stats || {});
-          setComputed(data.computed_stats || {});
-        } else {
-          setSeasonStats(null);
-          setRawStats({});
-          setComputed({});
-        }
+        if (data) { setSeasonStats(data); setRawStats(data.raw_stats || {}); setComputed(data.computed_stats || {}); }
+        else { setSeasonStats(null); setRawStats({}); setComputed({}); }
       });
   }, [playerData, season]);
+
+  // 학교 검색
+  useEffect(() => {
+    if (!schoolSearch.trim() || schoolSearch.length < 1) { setSchoolResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      const { data } = await supabase.from("schools").select("id,name,level,region")
+        .ilike("name", `%${schoolSearch}%`).eq("status","active").limit(8);
+      setSchoolResults(data || []);
+      setSearchLoading(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [schoolSearch]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setRaw = (k, v) => setRawStats(s => ({ ...s, [k]: v }));
@@ -141,7 +161,9 @@ export default function PlayerDashboard() {
 
   async function saveProfile() {
     setSaving(true);
-    const payload = { ...form, user_id: user.id, status: "active" };
+    // school_id 제거 - 연결 시스템으로 관리
+    const { school_id: _, ...rest } = form;
+    const payload = { ...rest, user_id: user.id, status: "active" };
     if (playerData) {
       const { error } = await supabase.from("players").update(payload).eq("id", playerData.id);
       if (error) toast.error(error.message); else toast.success("프로필이 저장됐습니다");
@@ -153,21 +175,61 @@ export default function PlayerDashboard() {
     setSaving(false);
   }
 
+  // 학교 연결 신청
+  async function requestConnection(school) {
+    if (!playerData) { toast.error("먼저 프로필을 저장해주세요"); return; }
+    setConnecting(true);
+    try {
+      // 기존 거절된 요청이 있으면 삭제 후 재신청
+      await supabase.from("school_connection_requests")
+        .delete().eq("player_id", playerData.id).eq("school_id", school.id);
+
+      const { error } = await supabase.from("school_connection_requests").insert({
+        player_id: playerData.id,
+        school_id: school.id,
+        status: "pending",
+      });
+      if (error) throw error;
+
+      // school_name_text 업데이트
+      await supabase.from("players").update({ school_name_text: school.name }).eq("id", playerData.id);
+      setPlayerData(p => ({ ...p, school_name_text: school.name }));
+
+      toast.success(`${school.name}에 연결 신청했습니다! 감독/코치 승인을 기다려주세요.`);
+      setSchoolSearch("");
+      setSchoolResults([]);
+      await loadConnectionStatus(playerData.id, playerData.school_id);
+    } catch (e) {
+      toast.error("신청 실패: " + e.message);
+    }
+    setConnecting(false);
+  }
+
+  // 연결 신청 취소
+  async function cancelRequest() {
+    if (!connectionReq) return;
+    await supabase.from("school_connection_requests").delete().eq("id", connectionReq.id);
+    await supabase.from("players").update({ school_name_text: null }).eq("id", playerData.id);
+    setConnectionReq(null);
+    toast.success("연결 신청을 취소했습니다");
+  }
+
+  // 학교 연결 해제 (직접 나가기)
+  async function leaveSchool() {
+    if (!window.confirm("소속 학교에서 나가시겠습니까? 시즌 기록은 유지됩니다.")) return;
+    await supabase.from("players").update({ school_id: null, school_name_text: null }).eq("id", playerData.id);
+    setPlayerData(p => ({ ...p, school_id: null, school_name_text: null }));
+    setConnectedSchool(null);
+    toast.success("학교 소속이 해제됐습니다");
+  }
+
   async function saveSeason() {
     if (!playerData) { toast.error("먼저 프로필을 저장해주세요"); return; }
     setStatSaving(true);
     const isPitcher = form.position === "투수";
     const c = isPitcher ? calcPitcherStats(rawStats) : calcBatterStats(rawStats);
     setComputed(c);
-
-    const payload = {
-      player_id: playerData.id,
-      season,
-      raw_stats: rawStats,
-      computed_stats: c,
-      stats_verified: false,
-    };
-
+    const payload = { player_id: playerData.id, season, raw_stats: rawStats, computed_stats: c, stats_verified: false };
     if (seasonStats) {
       await supabase.from("player_season_stats").update({ ...payload, stats_verified: false }).eq("id", seasonStats.id);
     } else {
@@ -182,15 +244,15 @@ export default function PlayerDashboard() {
 
   const isPitcher = form.position === "투수";
   const rawFields = isPitcher ? PITCHER_FIELDS : BATTER_FIELDS;
-  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
   const minLabel = isPitcher ? "※ 15이닝 미만은 랭킹에 표시되지 않습니다" : "※ 30타수 미만은 랭킹에 표시되지 않습니다";
+  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-extrabold text-navy">선수 프로필 관리</h1>
 
       <div className="flex gap-2">
-        {[["profile","기본 정보"],["stats","시즌 기록"]].map(([t,l]) => (
+        {[["profile","기본 정보"],["school","학교 연결"],["stats","시즌 기록"]].map(([t,l]) => (
           <button key={t} onClick={() => setTab(t)}
             className={"px-4 py-2 rounded-full text-sm font-bold border transition " + (tab===t ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>
             {l}
@@ -198,6 +260,7 @@ export default function PlayerDashboard() {
         ))}
       </div>
 
+      {/* ===== 기본 정보 탭 ===== */}
       {tab === "profile" && (
         <div className="card p-4 space-y-4">
           <div>
@@ -224,13 +287,6 @@ export default function PlayerDashboard() {
               {HANDS.map(h => <option key={h}>{h}</option>)}
             </select>
           </div>
-          <div>
-            <label className="label">소속 학교</label>
-            <select className="input" value={form.school_id||""} onChange={e => set("school_id",e.target.value)}>
-              <option value="">학교를 선택하세요</option>
-              {schools.map(s => <option key={s.id} value={s.id}>{s.name} ({levelLabel[s.level]||s.level})</option>)}
-            </select>
-          </div>
           <div><label className="label">자기 소개</label><textarea className="input min-h-[80px] resize-none" value={form.intro||""} onChange={e => set("intro",e.target.value)} placeholder="선수 소개, 강점 등을 적어주세요" /></div>
           <div><label className="label">하이라이트 영상 URL (YouTube)</label><input className="input" value={form.highlight_url||""} onChange={e => set("highlight_url",e.target.value)} placeholder="https://youtube.com/..." /></div>
           <button onClick={saveProfile} disabled={saving||!form.name} className="btn-primary w-full">
@@ -239,6 +295,132 @@ export default function PlayerDashboard() {
         </div>
       )}
 
+      {/* ===== 학교 연결 탭 ===== */}
+      {tab === "school" && (
+        <div className="space-y-4">
+          {!playerData && (
+            <div className="card p-6 text-center text-gray-400 text-sm">
+              먼저 기본 정보 탭에서 프로필을 저장해주세요
+            </div>
+          )}
+
+          {playerData && (
+            <>
+              {/* 현재 연결 상태 */}
+              <div className="card p-4">
+                <h3 className="text-sm font-extrabold text-navy mb-3 flex items-center gap-2">
+                  <Link2 size={15}/> 현재 소속 학교
+                </h3>
+
+                {/* 승인된 학교 있음 */}
+                {connectedSchool && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <CheckCircle size={14} className="text-green-600"/>
+                        <span className="text-sm font-extrabold text-green-700">연결됨</span>
+                      </div>
+                      <div className="font-bold">{connectedSchool.name}</div>
+                      <div className="text-xs text-gray-500">{levelLabel[connectedSchool.level] || connectedSchool.level}</div>
+                    </div>
+                    <button onClick={leaveSchool} className="text-xs text-red-400 font-bold border border-red-200 rounded-lg px-2 py-1 hover:bg-red-50">
+                      나가기
+                    </button>
+                  </div>
+                )}
+
+                {/* 대기 중인 요청 있음 */}
+                {!connectedSchool && connectionReq && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <Clock size={14} className="text-amber-600"/>
+                        <span className="text-sm font-extrabold text-amber-700">승인 대기 중</span>
+                      </div>
+                      <div className="font-bold">{connectionReq.schools?.name}</div>
+                      <div className="text-xs text-gray-500">감독/코치가 승인하면 학교 페이지에 등록됩니다</div>
+                    </div>
+                    <button onClick={cancelRequest} className="text-xs text-gray-500 font-bold border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50">
+                      취소
+                    </button>
+                  </div>
+                )}
+
+                {/* 연결 없음 */}
+                {!connectedSchool && !connectionReq && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-2 text-gray-400">
+                    <AlertCircle size={14}/>
+                    <span className="text-sm">소속 학교가 없습니다</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 학교 검색 & 신청 (이미 승인된 학교 없을 때) */}
+              {!connectedSchool && (
+                <div className="card p-4">
+                  <h3 className="text-sm font-extrabold text-navy mb-1">
+                    {connectionReq ? "다른 학교로 변경 신청" : "학교 연결 신청"}
+                  </h3>
+                  {connectionReq && (
+                    <p className="text-xs text-amber-600 mb-3">⚠️ 새 학교에 신청하면 기존 대기 신청이 자동 취소됩니다.</p>
+                  )}
+                  <p className="text-xs text-gray-400 mb-3">학교명으로 검색하여 연결을 신청하세요. 해당 학교 감독/코치가 승인하면 학교 페이지에 등록됩니다.</p>
+
+                  <div className="relative">
+                    <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white focus-within:border-navy transition">
+                      <Search size={15} className="text-gray-400 flex-shrink-0"/>
+                      <input
+                        className="flex-1 text-sm outline-none bg-transparent"
+                        placeholder="학교 이름 검색..."
+                        value={schoolSearch}
+                        onChange={e => setSchoolSearch(e.target.value)}
+                      />
+                      {schoolSearch && (
+                        <button onClick={() => { setSchoolSearch(""); setSchoolResults([]); }}>
+                          <X size={14} className="text-gray-400"/>
+                        </button>
+                      )}
+                    </div>
+
+                    {(schoolResults.length > 0 || searchLoading) && (
+                      <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                        {searchLoading && <div className="p-3 text-xs text-center text-gray-400">검색 중...</div>}
+                        {schoolResults.map(s => (
+                          <button key={s.id} onClick={() => requestConnection(s)} disabled={connecting}
+                            className="w-full text-left px-4 py-3 hover:bg-navy/5 border-b last:border-b-0 border-gray-50 transition">
+                            <div className="text-sm font-bold">{s.name}</div>
+                            <div className="text-xs text-gray-400">{levelLabel[s.level]||s.level} · {s.region}</div>
+                          </button>
+                        ))}
+                        {!searchLoading && schoolResults.length === 0 && schoolSearch.trim() && (
+                          <div className="p-3 text-xs text-center text-gray-400">검색 결과가 없습니다</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-gray-400 mt-3">
+                    💡 소속 학교가 플랫폼에 등록되지 않은 경우, 학교 감독/코치에게 베이스로드 가입 및 학교 등록을 요청해주세요.
+                  </p>
+                </div>
+              )}
+
+              {/* 연결된 학교 있으면 변경 옵션 */}
+              {connectedSchool && (
+                <div className="card p-4">
+                  <h3 className="text-sm font-extrabold text-navy mb-1">학교 변경</h3>
+                  <p className="text-xs text-gray-400 mb-3">학교를 변경하려면 먼저 '나가기'를 누른 후 새 학교에 신청하세요. 시즌 기록은 유지됩니다.</p>
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+                    ℹ️ 학년이 올라가 학교가 바뀐 경우에도 이전 시즌 기록은 그대로 보존됩니다.
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ===== 시즌 기록 탭 ===== */}
       {tab === "stats" && (
         <div className="space-y-4">
           {!playerData && (
@@ -249,7 +431,6 @@ export default function PlayerDashboard() {
 
           {playerData && (
             <>
-              {/* 시즌 선택 */}
               <div className="card p-3 flex items-center gap-3">
                 <span className="text-sm font-bold text-navy">시즌</span>
                 <select className="input flex-1" value={season} onChange={e => setSeason(Number(e.target.value))}>
@@ -273,7 +454,6 @@ export default function PlayerDashboard() {
                 <p className="mt-1">입력 후 <strong>자동 계산</strong> 버튼을 눌러 스탯을 확인하세요. 감독/코치가 인증하면 ✅ 인증 뱃지가 붙어요.</p>
               </div>
 
-              {/* 원본 기록 입력 */}
               <div className="card p-4">
                 <h3 className="text-sm font-extrabold text-navy mb-3">
                   {isPitcher ? "⚾ 투수 원본 기록 입력" : "🏏 타자 원본 기록 입력"}
@@ -294,34 +474,22 @@ export default function PlayerDashboard() {
                 </button>
               </div>
 
-              {/* 계산된 스탯 */}
               {Object.keys(computed).length > 0 && (
                 <div className="card p-4">
                   <h3 className="text-sm font-extrabold text-navy mb-3">📊 계산된 스탯</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {isPitcher ? [
-                      ["방어율", computed.era],
-                      ["WHIP", computed.whip],
-                      ["탈삼진", computed.k_count],
-                      ["승", computed.wins],
-                      ["패", computed.losses],
-                      ["세이브", computed.saves],
-                      ["이닝", computed.innings],
+                      ["방어율", computed.era], ["WHIP", computed.whip], ["탈삼진", computed.k_count],
+                      ["승", computed.wins], ["패", computed.losses], ["세이브", computed.saves], ["이닝", computed.innings],
                     ].map(([l, v]) => (
                       <div key={l} className="text-center bg-navy/5 rounded-lg py-2 px-1">
                         <div className="text-[10px] text-gray-500">{l}</div>
                         <div className="text-base font-extrabold text-navy">{v ?? "-"}</div>
                       </div>
                     )) : [
-                      ["타율", computed.avg],
-                      ["출루율", computed.obp],
-                      ["장타율", computed.slg],
-                      ["OPS", computed.ops],
-                      ["홈런", computed.hr],
-                      ["타점", computed.rbi],
-                      ["도루", computed.sb],
-                      ["타수", computed.ab],
-                      ["안타", computed.h],
+                      ["타율", computed.avg], ["출루율", computed.obp], ["장타율", computed.slg],
+                      ["OPS", computed.ops], ["홈런", computed.hr], ["타점", computed.rbi],
+                      ["도루", computed.sb], ["타수", computed.ab], ["안타", computed.h],
                     ].map(([l, v]) => (
                       <div key={l} className="text-center bg-navy/5 rounded-lg py-2 px-1">
                         <div className="text-[10px] text-gray-500">{l}</div>

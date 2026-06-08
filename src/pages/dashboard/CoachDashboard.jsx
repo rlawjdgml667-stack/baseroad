@@ -5,7 +5,7 @@ import ImageUpload from "../../components/ui/ImageUpload";
 import MultiImageUpload from "../../components/ui/MultiImageUpload";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
-import { Heart, MessageCircle, CheckCircle, Clock } from "lucide-react";
+import { Heart, MessageCircle, CheckCircle, Clock, UserCheck, UserX } from "lucide-react";
 
 const REGIONS = ["서울","경기","인천","강원","충청","전라","경상","제주"];
 const LEVELS = [{ value:"little", label:"리틀" },{ value:"elementary", label:"초등" },{ value:"middle", label:"중등" },{ value:"high", label:"고등" },{ value:"college", label:"대학" }];
@@ -25,6 +25,7 @@ export default function CoachDashboard() {
   const [playerSeasons, setPlayerSeasons] = useState([]);
   const [selectedSeason, setSelectedSeason] = useState(CUR_YEAR);
   const [stats, setStats] = useState({ favorites: 0, players: 0, qnaCount: 0 });
+  const [connectionRequests, setConnectionRequests] = useState([]);
   const [form, setForm] = useState({
     name:"", region:"서울", level:"high", address:"",
     contact_phone:"", contact_email:"", director_name:"",
@@ -54,6 +55,12 @@ export default function CoachDashboard() {
         supabase.from("qna").select("*").eq("school_id", data.id).order("created_at",{ascending:false}).then(({ data: qd }) => setQaList(qd||[]));
         // 소속 선수 로드
         supabase.from("players").select("id,name,position,profile_image_url,stats_verified").eq("school_id", data.id).eq("status","active").then(({ data: pd }) => setMyPlayers(pd||[]));
+        // 연결 요청 로드
+        supabase.from("school_connection_requests")
+          .select("*, players(id,name,position,birth_year,profile_image_url)")
+          .eq("school_id", data.id).eq("status","pending")
+          .order("created_at",{ascending:false})
+          .then(({ data: cr }) => setConnectionRequests(cr||[]));
       }
       setLoading(false);
     });
@@ -74,6 +81,32 @@ export default function CoachDashboard() {
       else { setSchool(data); toast.success("학교가 등록됐습니다!"); }
     }
     setSaving(false);
+  }
+
+  async function approveConnection(req) {
+    // 연결 승인: status → approved, players.school_id 업데이트
+    await supabase.from("school_connection_requests").update({ status: "approved" }).eq("id", req.id);
+    await supabase.from("players").update({ school_id: school.id }).eq("id", req.player_id);
+    setConnectionRequests(prev => prev.filter(r => r.id !== req.id));
+    setMyPlayers(prev => [...prev, { id: req.players.id, name: req.players.name, position: req.players.position, profile_image_url: req.players.profile_image_url, stats_verified: false }]);
+    setStats(s => ({ ...s, players: s.players + 1 }));
+    toast.success(`${req.players?.name} 선수 연결이 승인됐습니다! ✅`);
+  }
+
+  async function rejectConnection(req) {
+    await supabase.from("school_connection_requests").update({ status: "rejected" }).eq("id", req.id);
+    setConnectionRequests(prev => prev.filter(r => r.id !== req.id));
+    toast.success("연결 요청을 거절했습니다");
+  }
+
+  async function removePlayer(playerId, playerName) {
+    if (!window.confirm(`${playerName} 선수를 학교 명단에서 제거하시겠습니까?`)) return;
+    await supabase.from("players").update({ school_id: null }).eq("id", playerId);
+    // 연결 요청도 정리
+    await supabase.from("school_connection_requests").update({ status: "removed" }).eq("player_id", playerId).eq("school_id", school.id);
+    setMyPlayers(prev => prev.filter(p => p.id !== playerId));
+    setStats(s => ({ ...s, players: s.players - 1 }));
+    toast.success(`${playerName} 선수가 명단에서 제거됐습니다`);
   }
 
   async function loadPlayerSeasons(playerId) {
@@ -144,6 +177,7 @@ export default function CoachDashboard() {
       <div className="flex gap-2 overflow-x-auto pb-1">
         {[
           ["school","학교 정보"],
+          ["requests", "연결 요청" + (connectionRequests.length > 0 ? ` (${connectionRequests.length})` : "")],
           ["verify","선수 인증 ("+myPlayers.filter(p=>!p.stats_verified).length+")"],
           ["qa","Q&A ("+qaList.filter(q=>!q.answer).length+")"],
         ].map(([t,l]) => (
@@ -230,6 +264,82 @@ export default function CoachDashboard() {
           <button onClick={saveSchool} disabled={saving||!form.name} className="btn-primary w-full">
             {saving ? "저장 중..." : school ? "학교 정보 저장" : "학교 등록"}
           </button>
+        </div>
+      )}
+
+      {/* ===== 연결 요청 탭 ===== */}
+      {tab === "requests" && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-400">선수가 우리 학교로 연결을 신청했습니다. 확인 후 승인 또는 거절해주세요.</p>
+
+          {!school && (
+            <div className="card p-6 text-center text-gray-400 text-sm">학교를 먼저 등록해주세요</div>
+          )}
+
+          {school && connectionRequests.length === 0 && (
+            <div className="card p-8 text-center">
+              <div className="text-4xl mb-2">📭</div>
+              <p className="text-gray-400 text-sm">새로운 연결 요청이 없습니다</p>
+            </div>
+          )}
+
+          {connectionRequests.map(req => {
+            const p = req.players;
+            return (
+              <div key={req.id} className="card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-navy/10 flex-shrink-0">
+                    {p?.profile_image_url
+                      ? <img src={p.profile_image_url} className="w-full h-full object-cover" alt={p?.name}/>
+                      : <div className="w-full h-full flex items-center justify-center text-lg font-extrabold text-navy/30">{p?.name?.[0]}</div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-extrabold">{p?.name}</div>
+                    <div className="text-xs text-gray-400">{p?.position} {p?.birth_year ? `· ${p.birth_year}년생` : ""}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      신청일: {new Date(req.created_at).toLocaleDateString("ko")}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => approveConnection(req)}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-navy text-white font-bold text-sm py-2 rounded-xl hover:bg-navy/90 transition">
+                    <UserCheck size={15}/> 승인
+                  </button>
+                  <button onClick={() => rejectConnection(req)}
+                    className="flex-1 flex items-center justify-center gap-1.5 border-2 border-red-200 text-red-500 font-bold text-sm py-2 rounded-xl hover:bg-red-50 transition">
+                    <UserX size={15}/> 거절
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 현재 소속 선수 목록 (제거 기능 포함) */}
+          {school && myPlayers.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-extrabold text-navy mb-2">현재 소속 선수 ({myPlayers.length}명)</h3>
+              <div className="space-y-2">
+                {myPlayers.map(p => (
+                  <div key={p.id} className="card p-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl overflow-hidden bg-navy/10 flex-shrink-0">
+                      {p.profile_image_url
+                        ? <img src={p.profile_image_url} className="w-full h-full object-cover" alt={p.name}/>
+                        : <div className="w-full h-full flex items-center justify-center font-bold text-navy/30 text-sm">{p.name?.[0]}</div>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate">{p.name}</div>
+                      <div className="text-xs text-gray-400">{p.position}</div>
+                    </div>
+                    <button onClick={() => removePlayer(p.id, p.name)}
+                      className="text-xs text-red-400 font-bold hover:text-red-600 border border-red-100 rounded-lg px-2 py-0.5">
+                      제거
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
