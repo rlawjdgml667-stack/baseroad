@@ -7,22 +7,32 @@ import { useSearchParams, Link } from "react-router-dom";
 
 const REGIONS = ["전체","서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 const POSITIONS = ["전체","투수","포수","내야수","외야수"];
-const GRADES = ["전체","리틀","초등","중학","고등","대학"];
+const GRADES = [
+  { label:"전체", value:"전체" },
+  { label:"리틀", value:"little" },
+  { label:"초등", value:"elementary" },
+  { label:"중학", value:"middle" },
+  { label:"고등", value:"high" },
+  { label:"대학", value:"college" },
+];
+const LEVEL_LABEL = { little:"리틀", elementary:"초등", middle:"중학", high:"고등", college:"대학" };
 
 const RANKING_CONFIGS = {
   "투수": [
-    { key:"era", label:"방어율", unit:"", asc:true },
-    { key:"wins", label:"승", unit:"승", asc:false },
-    { key:"k_count", label:"탈삼진", unit:"K", asc:false },
-    { key:"innings", label:"이닝", unit:"이닝", asc:false },
+    { key:"era", label:"방어율", asc:true },
+    { key:"wins", label:"승", asc:false },
+    { key:"k_count", label:"탈삼진", asc:false },
+    { key:"whip", label:"WHIP", asc:true },
   ],
   "타자": [
-    { key:"avg", label:"타율", unit:"", asc:false },
-    { key:"hr", label:"홈런", unit:"HR", asc:false },
-    { key:"rbi", label:"타점", unit:"타점", asc:false },
-    { key:"ops", label:"OPS", unit:"", asc:false },
+    { key:"avg", label:"타율", asc:false },
+    { key:"hr", label:"홈런", asc:false },
+    { key:"rbi", label:"타점", asc:false },
+    { key:"ops", label:"OPS", asc:false },
   ],
 };
+
+const CUR_YEAR = new Date().getFullYear();
 
 export default function PlayerList() {
   const [players, setPlayers] = useState([]);
@@ -35,55 +45,92 @@ export default function PlayerList() {
   const [tab, setTab] = useState(searchParams.get("tab") === "ranking" ? "ranking" : "list");
   const [rankPos, setRankPos] = useState("투수");
   const [rankStat, setRankStat] = useState("era");
+  const [rankGrade, setRankGrade] = useState("전체");
 
   useEffect(() => {
-    supabase.from("players").select("*, schools(name, region, level)").eq("status","active").then(({ data }) => {
-      setPlayers(data || []);
+    async function load() {
+      // 선수 + 학교 + 최신 시즌 기록 함께 조회
+      const { data: playersData } = await supabase
+        .from("players")
+        .select("*, schools(name, region, level)")
+        .eq("status", "active");
+
+      if (!playersData || playersData.length === 0) {
+        setPlayers([]);
+        setLoading(false);
+        return;
+      }
+
+      // 각 선수의 최신 시즌 기록 조회 (인증된 것 우선, 없으면 최신)
+      const playerIds = playersData.map(p => p.id);
+      const { data: statsData } = await supabase
+        .from("player_season_stats")
+        .select("player_id, season, computed_stats, raw_stats, stats_verified")
+        .in("player_id", playerIds)
+        .order("season", { ascending: false });
+
+      // 각 선수별 최신 기록 매핑 (인증된 것 우선)
+      const statsMap = {};
+      (statsData || []).forEach(s => {
+        if (!statsMap[s.player_id]) {
+          statsMap[s.player_id] = s;
+        } else if (s.stats_verified && !statsMap[s.player_id].stats_verified) {
+          statsMap[s.player_id] = s;
+        }
+      });
+
+      const merged = playersData.map(p => ({
+        ...p,
+        latestStats: statsMap[p.id] || null,
+      }));
+
+      setPlayers(merged);
       setLoading(false);
-    });
+    }
+    load();
   }, []);
 
+  // 목록 필터
   const filtered = players.filter(p => {
     const sr = p.schools?.region || "";
     const sl = p.schools?.level || "";
-    const levelMap = { little:"리틀", elementary:"초등", middle:"중학", high:"고등", college:"대학" };
     if (region !== "전체" && !sr.includes(region)) return false;
     if (position !== "전체" && p.position !== position) return false;
-    if (grade !== "전체" && levelMap[sl] !== grade) return false;
+    if (grade !== "전체" && sl !== grade) return false;
     if (search && !p.name.includes(search) && !(p.schools?.name||"").includes(search)) return false;
     return true;
   });
 
-  // 랭킹 데이터 - player_season_stats에서 최신 시즌 기준
-  const pitchers = players.filter(p => p.position === "투수");
-  const batters = players.filter(p => ["포수","내야수","외야수"].includes(p.position));
-  const rankPlayers = rankPos === "투수" ? pitchers : batters;
-  const rankConfig = (rankPos === "투수" ? RANKING_CONFIGS["투수"] : RANKING_CONFIGS["타자"]);
+  // 랭킹 필터
+  const rankConfig = rankPos === "투수" ? RANKING_CONFIGS["투수"] : RANKING_CONFIGS["타자"];
   const currentRankStat = rankConfig.find(r => r.key === rankStat) || rankConfig[0];
 
-  const getStat = (p, key) => {
-    if (p.season_stats) return p.season_stats[key];
-    if (p.stats) return p.stats[key];
-    return p[key];
-  };
+  const getStat = (p, key) => p.latestStats?.computed_stats?.[key];
 
-  // 최소 기준 필터 (투수: 15이닝, 타자: 30타수)
   const meetsMinimum = (p) => {
     if (rankPos === "투수") {
-      const ip = Number(getStat(p, "innings") || 0);
+      const raw = p.latestStats?.raw_stats;
+      if (!raw?.ip) return false;
+      const parts = String(raw.ip).split(".");
+      const ip = (parseInt(parts[0])||0) + (parseInt(parts[1]||0))/3;
       return ip >= 15;
     } else {
-      const ab = Number(getStat(p, "ab") || 0);
-      return ab >= 30;
+      return Number(p.latestStats?.raw_stats?.ab || 0) >= 30;
     }
   };
+
+  const rankPlayers = players.filter(p => {
+    const isRightPos = rankPos === "투수" ? p.position === "투수" : ["포수","내야수","외야수"].includes(p.position);
+    if (!isRightPos) return false;
+    if (rankGrade !== "전체" && p.schools?.level !== rankGrade) return false;
+    return true;
+  });
 
   const ranked = [...rankPlayers]
     .filter(p => getStat(p, currentRankStat.key) != null && meetsMinimum(p))
     .sort((a, b) => currentRankStat.asc
       ? (Number(getStat(a, currentRankStat.key))||999) - (Number(getStat(b, currentRankStat.key))||999)
-      : (Number(getStat(b, currentRankStat.key))||0) - (Number(getStat(a, currentRankStat.key))||0)
-    )
+      : (Number(getStat(b, currentRankStat.key))||0) - (Number(getStat(a, currentRankStat.key))||0))
     .slice(0, 20);
 
   const medalColor = ["text-yellow-500","text-gray-400","text-orange-400"];
@@ -107,6 +154,7 @@ export default function PlayerList() {
         ))}
       </div>
 
+      {/* ===== 목록 탭 ===== */}
       {tab === "list" && (
         <>
           <div className="relative">
@@ -114,6 +162,7 @@ export default function PlayerList() {
             <input className="input pl-9" placeholder="선수명 또는 학교명 검색..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="space-y-2">
+            {/* 지역 필터 */}
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {REGIONS.map(r => (
                 <button key={r} onClick={() => setRegion(r)}
@@ -122,7 +171,8 @@ export default function PlayerList() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-1.5">
+            {/* 포지션 필터 */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
               {POSITIONS.map(p => (
                 <button key={p} onClick={() => setPosition(p)}
                   className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " + (position===p ? "bg-gold text-white border-gold" : "bg-white text-gray-600 border-gray-200")}>
@@ -130,11 +180,12 @@ export default function PlayerList() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-1.5">
+            {/* 학교급 필터 */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
               {GRADES.map(g => (
-                <button key={g} onClick={() => setGrade(g)}
-                  className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " + (grade===g ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200")}>
-                  {g}
+                <button key={g.value} onClick={() => setGrade(g.value)}
+                  className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " + (grade===g.value ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200")}>
+                  {g.label}
                 </button>
               ))}
             </div>
@@ -151,12 +202,13 @@ export default function PlayerList() {
         </>
       )}
 
+      {/* ===== 랭킹 탭 ===== */}
       {tab === "ranking" && (
         <div className="space-y-3">
-          {/* 포지션 선택 */}
+          {/* 투수/타자 */}
           <div className="flex gap-2">
             {["투수","타자"].map(pos => (
-              <button key={pos} onClick={() => { setRankPos(pos); setRankStat(pos === "투수" ? "era" : "batting_avg"); }}
+              <button key={pos} onClick={() => { setRankPos(pos); setRankStat(pos === "투수" ? "era" : "avg"); }}
                 className={"px-4 py-2 rounded-full text-sm font-bold border transition " + (rankPos===pos ? "bg-gold text-white border-gold" : "bg-white text-gray-600 border-gray-200")}>
                 {pos}
               </button>
@@ -173,6 +225,16 @@ export default function PlayerList() {
             ))}
           </div>
 
+          {/* 학교급 필터 */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {GRADES.map(g => (
+              <button key={g.value} onClick={() => setRankGrade(g.value)}
+                className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " + (rankGrade===g.value ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200")}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+
           {/* 최소 기준 안내 */}
           <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-700">
             {rankPos === "투수"
@@ -184,6 +246,7 @@ export default function PlayerList() {
             <div className="card p-10 text-center text-gray-400">
               <Trophy size={32} className="mx-auto mb-2 text-gray-200"/>
               <p className="text-sm">기준을 충족한 {rankPos} 기록이 없습니다</p>
+              <p className="text-xs mt-1 text-gray-300">감독/코치 인증 후 랭킹에 등재됩니다</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -200,10 +263,17 @@ export default function PlayerList() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-extrabold text-sm truncate">{p.name}</div>
-                    <div className="text-xs text-gray-400">{p.position} · {p.schools?.name}</div>
+                    <div className="text-xs text-gray-400">
+                      {p.position}
+                      {p.schools?.name ? ` · ${p.schools.name}` : ""}
+                      {p.schools?.level ? ` · ${LEVEL_LABEL[p.schools.level]||""}` : ""}
+                    </div>
+                    {p.latestStats?.stats_verified && (
+                      <span className="text-[10px] text-green-600 font-bold">✅ 인증</span>
+                    )}
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-lg font-extrabold text-navy">{getStat(p, currentRankStat.key)}</div>
+                    <div className="text-lg font-extrabold text-navy">{getStat(p, currentRankStat.key) ?? "-"}</div>
                     <div className="text-[10px] text-gray-400">{currentRankStat.label}</div>
                   </div>
                 </Link>
