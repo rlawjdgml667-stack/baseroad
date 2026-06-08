@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase";
 import ImageUpload from "../../components/ui/ImageUpload";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
-import { Calculator, CheckCircle, Clock, Search, X, Link2, AlertCircle } from "lucide-react";
+import { Calculator, CheckCircle, Clock, Search, X, Link2, AlertCircle, RefreshCw } from "lucide-react";
 
 const POSITIONS = ["투수","포수","내야수","외야수"];
 const HANDS = ["우투우타","우투좌타","좌투좌타","좌투우타","스위치"];
@@ -457,6 +457,13 @@ export default function PlayerDashboard() {
                     <Clock size={14}/> 미인증
                   </span>
                 )}
+                <button onClick={async () => {
+                  const { data } = await supabase.from("player_season_stats").select("*").eq("player_id", playerData.id).eq("season", season).single();
+                  if (data) { setSeasonStats(data); setRawStats(data.raw_stats||{}); setComputed(data.computed_stats||{}); }
+                  toast.success("새로고침됐습니다");
+                }} className="ml-auto text-gray-400 hover:text-navy transition" title="인증 상태 새로고침">
+                  <RefreshCw size={14}/>
+                </button>
               </div>
 
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">

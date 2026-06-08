@@ -13,9 +13,22 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) { toast.error(error.message === "Invalid login credentials" ? "이메일 또는 비밀번호가 잘못됐습니다" : error.message); }
-    else { toast.success("로그인됐습니다"); navigate("/"); }
+    try {
+      await signIn(email, password);
+      toast.success("로그인됐습니다");
+      navigate("/");
+    } catch (error) {
+      const msg = error.message;
+      if (msg?.includes("Invalid login credentials") || msg?.includes("invalid_credentials")) {
+        toast.error("이메일 또는 비밀번호가 틀렸습니다");
+      } else if (msg?.includes("Email not confirmed")) {
+        toast.error("이메일 인증이 필요합니다");
+      } else if (msg?.includes("Too many requests")) {
+        toast.error("잠시 후 다시 시도해주세요");
+      } else {
+        toast.error("로그인 실패: " + msg);
+      }
+    }
     setLoading(false);
   }
 
