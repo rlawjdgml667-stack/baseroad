@@ -5,8 +5,16 @@ import { useAuth } from "../../contexts/AuthContext";
 import FacilityBadge from "../../components/school/FacilityBadge";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import PlayerCard from "../../components/player/PlayerCard";
-import { Heart, MapPin, Phone, Mail, ChevronLeft, X } from "lucide-react";
+import { Heart, MapPin, Phone, Mail, ChevronLeft, X, PenSquare, MessageCircle, Eye } from "lucide-react";
 import toast from "react-hot-toast";
+
+const CAT_COLOR = {
+  공지: "bg-red-100 text-red-600",
+  자유: "bg-gray-100 text-gray-600",
+  질문: "bg-blue-100 text-blue-600",
+  정보공유: "bg-green-100 text-green-700",
+  진학상담: "bg-purple-100 text-purple-700",
+};
 
 function extractYtId(url) {
   if (!url) return null;
@@ -22,6 +30,8 @@ export default function SchoolDetail() {
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
   const [imgIdx, setImgIdx] = useState(null);
+  const [boardPosts, setBoardPosts] = useState([]);
+  const [boardLoading, setBoardLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -30,6 +40,22 @@ export default function SchoolDetail() {
     ]).then(([s, p]) => {
       setSchool(s.data); setPlayers(p.data||[]); setLoading(false);
     });
+    // 학교 게시판 글 불러오기
+    supabase.from("posts")
+      .select("id, title, category, view_count, created_at, user_id")
+      .eq("school_id", id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(async ({ data }) => {
+        const userIds = [...new Set((data||[]).map(p=>p.user_id).filter(Boolean))];
+        let profileMap = {};
+        if (userIds.length > 0) {
+          const { data: profs } = await supabase.from("profiles").select("id,name").in("id", userIds);
+          (profs||[]).forEach(p => { profileMap[p.id] = p; });
+        }
+        setBoardPosts((data||[]).map(p => ({ ...p, author: profileMap[p.user_id]?.name || "익명" })));
+        setBoardLoading(false);
+      });
     if (user) {
       supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","school").eq("target_id", id).single()
         .then(({ data }) => setIsFav(!!data));
@@ -200,6 +226,44 @@ if (loading) return <LoadingSpinner />;
           </div>
         </div>
       )}
+
+      {/* 학교 게시판 */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title mb-0">💬 학교 게시판</h2>
+          {user && (
+            <Link
+              to={`/community/write?school_id=${id}&school_name=${encodeURIComponent(school.name)}`}
+              className="flex items-center gap-1 text-xs font-bold text-navy bg-navy/10 px-3 py-1.5 rounded-full hover:bg-navy/20 transition"
+            >
+              <PenSquare size={12}/> 글쓰기
+            </Link>
+          )}
+        </div>
+        {boardLoading && <div className="text-center py-6 text-gray-400 text-sm">불러오는 중...</div>}
+        {!boardLoading && boardPosts.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            <p className="text-sm">아직 게시글이 없습니다</p>
+            {user
+              ? <Link to={`/community/write?school_id=${id}&school_name=${encodeURIComponent(school.name)}`} className="text-navy font-bold text-xs mt-2 inline-block hover:underline">첫 글 남기기 →</Link>
+              : <p className="text-xs mt-1">로그인 후 글을 남겨보세요</p>
+            }
+          </div>
+        )}
+        {!boardLoading && boardPosts.length > 0 && (
+          <div className="divide-y divide-gray-100">
+            {boardPosts.map(post => (
+              <Link key={post.id} to={"/community/"+post.id} className="flex items-center gap-2 py-2.5 hover:bg-gray-50 rounded-lg px-1 transition">
+                <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 " + (CAT_COLOR[post.category]||"bg-gray-100 text-gray-500")}>{post.category}</span>
+                <span className="text-sm text-gray-800 flex-1 truncate">{post.title}</span>
+                <span className="text-[10px] text-gray-400 flex-shrink-0 flex items-center gap-1.5">
+                  <Eye size={10}/>{post.view_count||0}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       {imgIdx !== null && (
         <div className="fixed inset-0 bg-black/90 z-[300] flex items-center justify-center p-4" onClick={() => setImgIdx(null)}>

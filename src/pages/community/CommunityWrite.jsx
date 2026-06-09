@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { ChevronLeft } from "lucide-react";
@@ -11,6 +11,9 @@ const ADMIN_CATEGORIES = ["공지", "자유", "질문", "정보공유", "진학�
 export default function CommunityWrite() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const schoolId = searchParams.get("school_id");
+  const schoolName = searchParams.get("school_name");
   const cats = profile?.role === "admin" ? ADMIN_CATEGORIES : CATEGORIES;
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -26,16 +29,19 @@ export default function CommunityWrite() {
     if (!title.trim()) { toast.error("제목을 입력해주세요"); return; }
     if (!content.trim()) { toast.error("내용을 입력해주세요"); return; }
     setSaving(true);
-    const { data, error } = await supabase.from("posts").insert({
+    const insertData = {
       user_id: user.id,
       title: title.trim(),
       content: content.trim(),
       category,
-    }).select("id").single();
+    };
+    if (schoolId) insertData.school_id = schoolId;
+    const { data, error } = await supabase.from("posts").insert(insertData).select("id").single();
     setSaving(false);
     if (error) { toast.error("작성 실패: " + error.message); return; }
     toast.success("게시글이 등록됐습니다!");
-    navigate("/community/" + data.id);
+    if (schoolId) navigate(-1);
+    else navigate("/community/" + data.id);
   }
 
   return (
@@ -44,8 +50,15 @@ export default function CommunityWrite() {
         <button onClick={() => navigate(-1)} className="text-navy/60 hover:text-navy">
           <ChevronLeft size={20}/>
         </button>
-        <h1 className="text-lg font-extrabold text-navy">글쓰기</h1>
+        <h1 className="text-lg font-extrabold text-navy">
+          {schoolName ? `${schoolName} 게시판 글쓰기` : "글쓰기"}
+        </h1>
       </div>
+      {schoolName && (
+        <div className="bg-navy/5 rounded-xl px-4 py-2 text-xs text-navy font-bold">
+          📌 {schoolName} 학교 게시판에 등록됩니다
+        </div>
+      )}
 
       <div className="card p-4 space-y-4">
         {/* 카테고리 */}
