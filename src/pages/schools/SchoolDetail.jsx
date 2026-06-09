@@ -50,10 +50,13 @@ export default function SchoolDetail() {
         const userIds = [...new Set((data||[]).map(p=>p.user_id).filter(Boolean))];
         let profileMap = {};
         if (userIds.length > 0) {
-          const { data: profs } = await supabase.from("profiles").select("id,name").in("id", userIds);
+          const { data: profs } = await supabase.from("profiles").select("id,name,role,school_name").in("id", userIds);
           (profs||[]).forEach(p => { profileMap[p.id] = p; });
         }
-        setBoardPosts((data||[]).map(p => ({ ...p, author: profileMap[p.user_id]?.name || "익명" })));
+        setBoardPosts((data||[]).map(p => {
+          const prof = profileMap[p.user_id];
+          return { ...p, author: prof?.name || "익명", role: prof?.role, school_name: prof?.school_name };
+        }));
         setBoardLoading(false);
       });
     if (user) {
@@ -252,15 +255,29 @@ if (loading) return <LoadingSpinner />;
         )}
         {!boardLoading && boardPosts.length > 0 && (
           <div className="divide-y divide-gray-100">
-            {boardPosts.map(post => (
-              <Link key={post.id} to={"/community/"+post.id} className="flex items-center gap-2 py-2.5 hover:bg-gray-50 rounded-lg px-1 transition">
-                <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 " + (CAT_COLOR[post.category]||"bg-gray-100 text-gray-500")}>{post.category}</span>
-                <span className="text-sm text-gray-800 flex-1 truncate">{post.title}</span>
-                <span className="text-[10px] text-gray-400 flex-shrink-0 flex items-center gap-1.5">
-                  <Eye size={10}/>{post.view_count||0}
-                </span>
-              </Link>
-            ))}
+            {boardPosts.map(post => {
+              // 이 학교 소속 감독·코치인지 확인
+              const isCoach = post.role === "coach" && post.school_name === school?.name;
+              return (
+                <Link key={post.id} to={"/community/"+post.id} className="flex items-start gap-2 py-2.5 hover:bg-gray-50 rounded-lg px-1 transition">
+                  <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 " + (CAT_COLOR[post.category]||"bg-gray-100 text-gray-500")}>{post.category}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 truncate">{post.title}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-[10px] text-gray-400">{post.author}</span>
+                      {isCoach && (
+                        <span className="text-[9px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">
+                          감독·코치
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-gray-400 flex-shrink-0 flex items-center gap-1 mt-0.5">
+                    <Eye size={10}/>{post.view_count||0}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
