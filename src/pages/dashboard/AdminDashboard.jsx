@@ -18,6 +18,12 @@ export default function AdminDashboard() {
   const [posts, setPosts] = useState([]);
   const [memberSearch, setMemberSearch] = useState("");
   const [designateMap, setDesignateMap] = useState({}); // coach id → 담당자 지정 여부
+  // 문의 관리
+  const [inquiries, setInquiries] = useState([]);
+  const [inquiryFilter, setInquiryFilter] = useState("전체");
+  const [selectedInquiry, setSelectedInquiry] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [replySaving, setReplySaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -26,15 +32,34 @@ export default function AdminDashboard() {
       supabase.from("players").select("id,name,position,status,created_at,schools(name)"),
       supabase.from("profiles").select("*").order("created_at",{ascending:false}),
       supabase.from("qna").select("*, profiles(name)").order("created_at",{ascending:false}),
-    ]).then(([c,s,p,pr,qna]) => {
+      supabase.from("inquiries").select("*").order("created_at",{ascending:false}),
+    ]).then(([c,s,p,pr,qna,inq]) => {
       setPendingCoaches(c.data||[]);
       setSchools(s.data||[]);
       setPlayers(p.data||[]);
       setAllProfiles(pr.data||[]);
       setPosts(qna.data||[]);
+      setInquiries(inq.data||[]);
       setLoading(false);
     });
   }, []);
+
+  async function markRead(inq) {
+    if (inq.is_read) return;
+    await supabase.from("inquiries").update({ is_read: true }).eq("id", inq.id);
+    setInquiries(prev => prev.map(i => i.id === inq.id ? { ...i, is_read: true } : i));
+    if (selectedInquiry?.id === inq.id) setSelectedInquiry(i => ({ ...i, is_read: true }));
+  }
+
+  async function saveReply() {
+    if (!replyText.trim() || !selectedInquiry) return;
+    setReplySaving(true);
+    await supabase.from("inquiries").update({ admin_reply: replyText.trim(), is_read: true }).eq("id", selectedInquiry.id);
+    setInquiries(prev => prev.map(i => i.id === selectedInquiry.id ? { ...i, admin_reply: replyText.trim(), is_read: true } : i));
+    setSelectedInquiry(i => ({ ...i, admin_reply: replyText.trim(), is_read: true }));
+    setReplySaving(false);
+    toast.success("답변이 저장됐습니다");
+  }
 
   async function approveCoach(coach) {
     // 1. 코치 계정 승인
@@ -119,6 +144,15 @@ export default function AdminDashboard() {
     count: schools.filter(s => s.level === k).length
   })).filter(x => x.count > 0);
 
+  const unreadCount = inquiries.filter(i => !i.is_read).length;
+  const filteredInquiries = inquiries.filter(i => {
+    if (inquiryFilter === "읽지 않음") return !i.is_read;
+    if (inquiryFilter === "감독·코치") return i.role === "감독·코치";
+    if (inquiryFilter === "선수") return i.role === "선수";
+    if (inquiryFilter === "학부모") return i.role === "학부모";
+    return true;
+  });
+
   const tabs = [
     ["stats","통계"],
     ["pending","승인 대기 ("+pendingCoaches.length+")"],
@@ -126,6 +160,7 @@ export default function AdminDashboard() {
     ["players","선수 관리 ("+players.length+")"],
     ["community","커뮤니티 관리"],
     ["members","회원 관리"],
+    ["inquiries", unreadCount > 0 ? `문의 관리 🔴${unreadCount}` : "문의 관리"],
   ];
 
   const filteredMembers = allProfiles.filter(p =>
@@ -380,6 +415,99 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ===== 문의 관리 탭 ===== */}
+      {tab === "inquiries" && (
+        <div className="space-y-3">
+          {/* 상단 통계 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="card p-3 text-center">
+              <div className="text-2xl font-extrabold text-navy">{inquiries.length}</div>
+              <div className="text-xs text-gray-400">전체 문의</div>
+            </div>
+            <div className="card p-3 text-center">
+              <div className="text-2xl font-extrabold text-red-500">{unreadCount}</div>
+              <div className="text-xs text-gray-400">읽지 않은 문의</div>
+            </div>
+          </div>
+
+          {/* 필터 */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {["전체","읽지 않음","감독·코치","선수","학부모"].map(f => (
+              <button key={f} onClick={() => setInquiryFilter(f)}
+                className={"flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition " +
+                  (inquiryFilter === f ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {selectedInquiry ? (
+            // 상세 보기
+            <div className="card p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <button onClick={() => { setSelectedInquiry(null); setReplyText(""); }}
+                  className="text-xs font-bold text-navy/70 hover:text-navy">← 목록으로</button>
+                {!selectedInquiry.is_read && (
+                  <button onClick={() => markRead(selectedInquiry)}
+                    className="text-xs font-bold bg-green-50 text-green-600 border border-green-200 px-3 py-1 rounded-lg hover:bg-green-100 transition">
+                    읽음 처리
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-navy text-base">{selectedInquiry.name}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:"#1a2744",color:"#c8901a"}}>{selectedInquiry.role}</span>
+                  {!selectedInquiry.is_read && <span className="text-[10px] font-bold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">미확인</span>}
+                </div>
+                <div className="text-xs text-gray-500 space-y-0.5">
+                  <div>📞 {selectedInquiry.contact}</div>
+                  {selectedInquiry.organization && <div>🏫 {selectedInquiry.organization}</div>}
+                  <div>🕐 {new Date(selectedInquiry.created_at).toLocaleString("ko-KR")}</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {selectedInquiry.content}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 mb-1.5 block">관리자 답변</label>
+                <textarea
+                  className="input min-h-[100px] resize-none text-sm"
+                  placeholder="답변을 입력하세요..."
+                  value={replyText || selectedInquiry.admin_reply || ""}
+                  onChange={e => setReplyText(e.target.value)}
+                />
+                <button onClick={saveReply} disabled={replySaving}
+                  className="mt-2 w-full py-2.5 font-bold text-sm rounded-xl transition disabled:opacity-50"
+                  style={{background:"#1a2744",color:"#c8901a"}}>
+                  {replySaving ? "저장 중..." : "답변 저장"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            // 목록
+            <div className="space-y-2">
+              {filteredInquiries.length === 0 && (
+                <div className="card p-10 text-center text-gray-400 text-sm">문의가 없습니다</div>
+              )}
+              {filteredInquiries.map(inq => (
+                <button key={inq.id} onClick={() => { setSelectedInquiry(inq); setReplyText(inq.admin_reply || ""); markRead(inq); }}
+                  className={"card p-3 w-full text-left hover:shadow-md transition " + (!inq.is_read ? "border-l-4 border-red-400" : "")}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-sm text-navy">{inq.name}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:"#1a2744",color:"#c8901a"}}>{inq.role}</span>
+                    {!inq.is_read && <span className="text-[10px] font-bold bg-red-100 text-red-500 px-1.5 py-0.5 rounded-full ml-auto">미확인</span>}
+                    {inq.admin_reply && <span className="text-[10px] font-bold bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full ml-auto">답변완료</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 truncate">{inq.content}</p>
+                  <p className="text-[10px] text-gray-300 mt-1">{new Date(inq.created_at).toLocaleDateString("ko-KR")}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

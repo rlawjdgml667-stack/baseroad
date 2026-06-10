@@ -34,6 +34,28 @@ const RANKING_CONFIGS = {
 
 const CUR_YEAR = new Date().getFullYear();
 
+function getSeasonPhase() {
+  const now = new Date();
+  const mid = new Date(now.getFullYear() + "-06-01");
+  const late = new Date(now.getFullYear() + "-08-01");
+  if (now < mid) return "early";
+  if (now < late) return "mid";
+  return "late";
+}
+
+function getMinRequirements() {
+  const phase = getSeasonPhase();
+  if (phase === "early") return { innings: 0, atBats: 0 };
+  if (phase === "mid")   return { innings: 15, atBats: 30 };
+  return { innings: 25, atBats: 40 };
+}
+
+const PHASE_BANNER = {
+  early: "📊 시즌 초반 기록입니다. 경기 수가 적어 기록이 유동적일 수 있습니다.",
+  mid:   "📊 30타석 / 15이닝 이상 선수만 표시됩니다. (시즌 중반 기준 적용 중)",
+  late:  "📊 40타석 / 25이닝 이상 선수만 표시됩니다. (시즌 후반 기준 적용 중)",
+};
+
 export default function PlayerList() {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,15 +148,19 @@ export default function PlayerList() {
   const getStat = (p, key) => seasonStatsMap[p.id]?.computed_stats?.[key];
   const getSeasonStats = (p) => seasonStatsMap[p.id];
 
+  const { innings: minInnings, atBats: minAtBats } = getMinRequirements();
+  const seasonPhase = getSeasonPhase();
+
   const meetsMinimum = (p) => {
+    if (minInnings === 0 && minAtBats === 0) return true;
     const raw = getSeasonStats(p)?.raw_stats;
     if (rankPos === "투수") {
       if (!raw?.ip) return false;
       const parts = String(raw.ip).split(".");
       const ip = (parseInt(parts[0])||0) + (parseInt(parts[1]||0))/3;
-      return ip >= 15;
+      return ip >= minInnings;
     } else {
-      return Number(raw?.ab || 0) >= 30;
+      return Number(raw?.ab || 0) >= minAtBats;
     }
   };
 
@@ -224,6 +250,10 @@ export default function PlayerList() {
       {/* ===== 랭킹 탭 ===== */}
       {tab === "ranking" && (
         <div className="space-y-3">
+          {/* 시즌 기준 배너 */}
+          <div className="rounded-xl px-4 py-3 text-sm font-bold" style={{ background: "#1a2744", color: "#c8901a" }}>
+            {PHASE_BANNER[seasonPhase]}
+          </div>
           {/* 시즌 선택 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 flex-shrink-0">시즌</span>
@@ -274,9 +304,11 @@ export default function PlayerList() {
           {/* 인증 기록만 토글 */}
           <div className="flex items-center justify-between">
             <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-700 flex-1 mr-2">
-              {rankPos === "투수"
-                ? "⚠️ 15이닝 미만 선수는 랭킹에 표시되지 않습니다"
-                : "⚠️ 30타수 미만 선수는 랭킹에 표시되지 않습니다"}
+              {seasonPhase === "early"
+                ? "⚠️ 시즌 초반 — 최소 기준 없이 모든 선수가 표시됩니다"
+                : rankPos === "투수"
+                  ? `⚠️ ${minInnings}이닝 미만 선수는 랭킹에 표시되지 않습니다`
+                  : `⚠️ ${minAtBats}타석 미만 선수는 랭킹에 표시되지 않습니다`}
             </div>
             <button onClick={() => setVerifiedOnly(v => !v)}
               className={"flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition " + (verifiedOnly ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-500 border-gray-200")}>
