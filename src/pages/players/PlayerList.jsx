@@ -339,7 +339,7 @@ export default function PlayerList() {
                     <div className="font-extrabold text-sm truncate">{p.name}</div>
                     <div className="text-xs text-gray-400">
                       {p.position}
-                      {p.schools?.name ? ` · ${p.schools.name}` : ""}
+                      {` · ${p.schools?.name || "소속 없음"}`}
                       {p.schools?.level ? ` · ${LEVEL_LABEL[p.schools.level]||""}` : ""}
                     </div>
                     {getSeasonStats(p)?.stats_verified && (

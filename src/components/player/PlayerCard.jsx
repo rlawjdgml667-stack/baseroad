@@ -1,8 +1,14 @@
-﻿import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Heart } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 
 const posColor = { "투수":"bg-red-100 text-red-700","포수":"bg-blue-100 text-blue-700","내야수":"bg-green-100 text-green-700","외야수":"bg-purple-100 text-purple-700" };
 
 export default function PlayerCard({ player }) {
+  const { user } = useAuth();
+  const [isFav, setIsFav] = useState(false);
   const statKey = player.position === "투수" ? "max_speed" : "avg";
   const statLabel = player.position === "투수" ? "최고구속" : "타율";
   const statValue = player.stats?.[statKey];
@@ -10,8 +16,27 @@ export default function PlayerCard({ player }) {
   const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
   const posCls = posColor[player.position] || "bg-gray-100 text-gray-600";
 
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_id", player.id).eq("target_type", "player").maybeSingle()
+      .then(({ data }) => setIsFav(!!data));
+  }, [user, player.id]);
+
+  async function toggleFav(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    if (isFav) {
+      await supabase.from("favorites").delete().eq("user_id", user.id).eq("target_id", player.id).eq("target_type", "player");
+      setIsFav(false);
+    } else {
+      await supabase.from("favorites").insert({ user_id: user.id, target_id: player.id, target_type: "player" });
+      setIsFav(true);
+    }
+  }
+
   return (
-    <Link to={"/players/" + player.id} className="card flex gap-3 p-3 items-center hover:shadow-md transition">
+    <Link to={"/players/" + player.id} className="card flex gap-3 p-3 items-center hover:shadow-md transition relative">
       <div className="w-14 h-14 rounded-xl overflow-hidden bg-navy/10 flex-shrink-0">
         {player.profile_image_url
           ? <img src={player.profile_image_url} alt={player.name} className="w-full h-full object-cover" />
@@ -30,6 +55,11 @@ export default function PlayerCard({ player }) {
           <div className="text-xs text-gray-400">{statLabel}</div>
           <div className="font-extrabold text-navy">{statValue}</div>
         </div>
+      )}
+      {user && (
+        <button onClick={toggleFav} className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition">
+          <Heart size={14} fill={isFav ? "#f43f5e" : "none"} className={isFav ? "text-red-400" : "text-gray-300"} />
+        </button>
       )}
     </Link>
   );

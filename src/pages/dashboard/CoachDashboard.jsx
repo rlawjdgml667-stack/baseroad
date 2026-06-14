@@ -31,9 +31,10 @@ export default function CoachDashboard() {
     has_stadium:false, has_indoor:false, has_weight:false,
     has_dormitory:false, has_pitching_machine:false, has_trainer:false,
     bullpen_count:0, main_image_url:"", director_photo_url:"",
-    coaches:[],
+    coaches:[], notable_players:[],
   });
   const [newCoach, setNewCoach] = useState({ name:"", role:"코치", career:"", photo_url:"" });
+  const [newNotablePlayer, setNewNotablePlayer] = useState({ name:"", position:"", current_team:"" });
 
   useEffect(() => {
     if (profile?.status === "pending") { setLoading(false); return; }
@@ -261,6 +262,35 @@ export default function CoachDashboard() {
                 <ImageUpload bucket="school-images" path={user.id+"/coach-"+Date.now()} currentUrl={newCoach.photo_url} onUpload={url => setNewCoach(c=>({...c,photo_url:url}))} />
               </div>
               <button disabled={!newCoach.name.trim()} onClick={() => { set("coaches",[...(form.coaches||[]),{...newCoach}]); setNewCoach({name:"",role:"코치",career:"",photo_url:""}); }} className="btn-outline text-xs py-1.5 w-full">코치 추가</button>
+            </div>
+          </div>
+          <div>
+            <label className="label">주요 배출 선수</label>
+            <div className="space-y-2 mb-2">
+              {(form.notable_players||[]).map((p, i) => (
+                <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-bold">{p.name}</span>
+                    {p.position && <span className="text-xs text-gray-400 ml-1">· {p.position}</span>}
+                    {p.current_team && <span className="text-xs text-gray-400 ml-1">· {p.current_team}</span>}
+                  </div>
+                  <button onClick={() => set("notable_players", form.notable_players.filter((_,j) => j !== i))} className="text-xs text-red-400 font-bold hover:text-red-600">삭제</button>
+                </div>
+              ))}
+            </div>
+            <div className="border border-dashed border-gray-200 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-bold text-gray-500">선수 추가</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input className="input text-sm" placeholder="이름 *" value={newNotablePlayer.name} onChange={e => setNewNotablePlayer(p=>({...p,name:e.target.value}))} />
+                <input className="input text-sm" placeholder="포지션 (예: 투수)" value={newNotablePlayer.position} onChange={e => setNewNotablePlayer(p=>({...p,position:e.target.value}))} />
+              </div>
+              <input className="input text-sm" placeholder="현 소속팀 (예: OO대학교, 프로팀 등)" value={newNotablePlayer.current_team} onChange={e => setNewNotablePlayer(p=>({...p,current_team:e.target.value}))} />
+              <button
+                disabled={!newNotablePlayer.name.trim()}
+                onClick={() => { set("notable_players",[...(form.notable_players||[]),{...newNotablePlayer}]); setNewNotablePlayer({name:"",position:"",current_team:""}); }}
+                className="btn-outline text-xs py-1.5 w-full">
+                선수 추가
+              </button>
             </div>
           </div>
           <div>

@@ -1,9 +1,15 @@
-﻿import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Heart } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 import FacilityBadge from "./FacilityBadge";
 
 const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
 export default function SchoolCard({ school }) {
+  const { user } = useAuth();
+  const [isFav, setIsFav] = useState(false);
   const facilities = [
     { label:"전용구장", value: school.has_stadium },
     { label:"실내연습장", value: school.has_indoor },
@@ -11,6 +17,25 @@ export default function SchoolCard({ school }) {
     { label:"기숙사", value: school.has_dormitory },
     { label:"트레이너", value: school.has_trainer },
   ];
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_id", school.id).eq("target_type", "school").maybeSingle()
+      .then(({ data }) => setIsFav(!!data));
+  }, [user, school.id]);
+
+  async function toggleFav(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    if (isFav) {
+      await supabase.from("favorites").delete().eq("user_id", user.id).eq("target_id", school.id).eq("target_type", "school");
+      setIsFav(false);
+    } else {
+      await supabase.from("favorites").insert({ user_id: user.id, target_id: school.id, target_type: "school" });
+      setIsFav(true);
+    }
+  }
 
   return (
     <Link to={`/schools/${school.id}`} className="card block hover:shadow-md transition overflow-hidden">
@@ -26,6 +51,11 @@ export default function SchoolCard({ school }) {
         </div>
         {school.monthly_fee && (
           <div className="absolute top-2 right-2 bg-gold/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{school.monthly_fee}</div>
+        )}
+        {user && (
+          <button onClick={toggleFav} className="absolute top-2 left-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/30 hover:bg-black/50 transition">
+            <Heart size={13} fill={isFav ? "#f43f5e" : "none"} className={isFav ? "text-red-400" : "text-white"} />
+          </button>
         )}
       </div>
       <div className="p-3">

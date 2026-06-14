@@ -31,7 +31,7 @@ export default function AdminDashboard() {
       supabase.from("schools").select("id,name,region,level,status,created_at"),
       supabase.from("players").select("id,name,position,status,created_at,schools(name)"),
       supabase.from("profiles").select("*").order("created_at",{ascending:false}),
-      supabase.from("qna").select("*, profiles(name)").order("created_at",{ascending:false}),
+      supabase.from("posts").select("*, profiles(name)").order("created_at",{ascending:false}),
       supabase.from("inquiries").select("*").order("created_at",{ascending:false}),
     ]).then(([c,s,p,pr,qna,inq]) => {
       setPendingCoaches(c.data||[]);
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
 
   async function deletePost(id) {
     if (!confirm("게시글을 삭제하시겠습니까?")) return;
-    await supabase.from("qna").delete().eq("id", id);
+    await supabase.from("posts").delete().eq("id", id);
     setPosts(prev => prev.filter(p => p.id !== id));
     toast.success("게시글이 삭제됐습니다");
   }
@@ -367,8 +367,8 @@ export default function AdminDashboard() {
                   <span className="text-xs text-gray-400">{post.profiles?.name||"익명"}</span>
                   <span className="text-xs text-gray-300">{new Date(post.created_at).toLocaleDateString("ko")}</span>
                 </div>
-                <p className="text-sm font-semibold truncate">{post.title || post.question}</p>
-                {post.title && <p className="text-xs text-gray-400 truncate mt-0.5">{post.question}</p>}
+                <p className="text-sm font-semibold truncate">{post.title}</p>
+                {post.content && <p className="text-xs text-gray-400 truncate mt-0.5">{post.content}</p>}
               </div>
               <button onClick={() => deletePost(post.id)} className="text-xs text-red-400 font-bold hover:text-red-600 flex-shrink-0">삭제</button>
             </div>

@@ -26,6 +26,7 @@ export default function Register() {
     parentConsent: false, termsAgree: false, privacyAgree: false,
   });
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -52,9 +53,7 @@ export default function Register() {
         school_name: form.schoolName,
         phone: form.phone,
       });
-      if (role === "coach") toast.success("가입 신청이 완료됐습니다. 관리자 승인 후 이용하실 수 있습니다.");
-      else toast.success("회원가입이 완료됐습니다!");
-      navigate("/login");
+      setDone(true);
     } catch (error) {
       if (error.message?.includes("already registered") || error.message?.includes("already been registered")) {
         toast.error("이미 가입된 이메일입니다!");
@@ -68,6 +67,35 @@ export default function Register() {
     }
     setLoading(false);
   }
+
+  if (done) return (
+    <div className="max-w-sm mx-auto">
+      <div className="card p-8 text-center space-y-4">
+        <div className="text-5xl">{role === "coach" ? "⏳" : "📧"}</div>
+        <h2 className="text-xl font-extrabold text-navy">
+          {role === "coach" ? "가입 신청 완료!" : "이메일을 확인해주세요"}
+        </h2>
+        {role === "coach" ? (
+          <p className="text-sm text-gray-500">
+            관리자 승인 후 이용하실 수 있습니다.<br />
+            보통 1~2 영업일 내로 처리됩니다.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500">
+              <span className="font-bold text-navy">{form.email}</span>로<br />
+              인증 메일을 보냈습니다.
+            </p>
+            <p className="text-xs text-gray-400">
+              이메일의 인증 링크를 클릭한 후 로그인해주세요.<br />
+              메일이 오지 않으면 스팸함을 확인해주세요.
+            </p>
+          </>
+        )}
+        <Link to="/login" className="btn-primary block text-center">로그인하러 가기</Link>
+      </div>
+    </div>
+  );
 
   if (step === 1) return (
     <div className="max-w-sm mx-auto">

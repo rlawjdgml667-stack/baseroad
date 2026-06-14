@@ -20,6 +20,7 @@ import CoachDashboard from "./pages/dashboard/CoachDashboard";
 import PlayerDashboard from "./pages/dashboard/PlayerDashboard";
 import ParentDashboard from "./pages/dashboard/ParentDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 
@@ -47,7 +48,10 @@ export default function App() {
         <Route path="/community" element={<CommunityBoard />} />
         <Route path="/community/write" element={<CommunityWrite />} />
         <Route path="/community/:id" element={<CommunityDetail />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/profile" element={
+          <ProtectedRoute><Profile /></ProtectedRoute>
+        } />
         <Route path="/dashboard/coach" element={
           <ProtectedRoute roles={["coach","admin"]}><CoachDashboard /></ProtectedRoute>
         } />

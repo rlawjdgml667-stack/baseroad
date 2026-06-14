@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
 
 export default function Login() {
@@ -14,9 +15,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password);
+      const { data } = await signIn(email, password);
+      const { data: profileData } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+      const role = profileData?.role;
       toast.success("로그인됐습니다");
-      navigate("/");
+      if (role === "coach") navigate("/dashboard/coach");
+      else if (role === "player") navigate("/dashboard/player");
+      else if (role === "parent") navigate("/dashboard/parent");
+      else if (role === "admin") navigate("/dashboard/admin");
+      else navigate("/");
     } catch (error) {
       const msg = error.message;
       if (msg?.includes("Invalid login credentials") || msg?.includes("invalid_credentials")) {
@@ -50,6 +57,9 @@ export default function Login() {
             <input className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
           </div>
           <button className="btn-primary w-full" disabled={loading}>{loading ? "로그인 중..." : "로그인"}</button>
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-xs text-gray-400 hover:text-navy hover:underline">비밀번호를 잊으셨나요?</Link>
+          </div>
         </form>
         <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div><div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">또는</span></div></div>
         <button onClick={signInWithKakao} className="w-full bg-[#FEE500] text-[#3C1E1E] font-bold py-2.5 rounded-lg hover:brightness-95 transition flex items-center justify-center gap-2">

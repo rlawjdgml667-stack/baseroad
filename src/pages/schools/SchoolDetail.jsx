@@ -257,7 +257,7 @@ if (loading) return <LoadingSpinner />;
           <div className="divide-y divide-gray-100">
             {boardPosts.map(post => {
               // 이 학교 소속 감독·코치인지 확인
-              const isCoach = post.role === "coach" && post.school_name === school?.name;
+              const isCoach = post.user_id === school?.coach_user_id;
               return (
                 <Link key={post.id} to={"/community/"+post.id} className="flex items-start gap-2 py-2.5 hover:bg-gray-50 rounded-lg px-1 transition">
                   <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 " + (CAT_COLOR[post.category]||"bg-gray-100 text-gray-500")}>{post.category}</span>

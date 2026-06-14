@@ -32,7 +32,8 @@ function calcBatterStats(r) {
   const avg = h / ab;
   const obp_denom = ab + bb + hbp + sf;
   const obp = obp_denom > 0 ? (h + bb + hbp) / obp_denom : 0;
-  const slg = (h + dbl + 2 * tpl + 3 * hr) / ab;
+  const singles = h - dbl - tpl - hr;
+  const slg = (singles + 2 * dbl + 3 * tpl + 4 * hr) / ab;
   const ops = obp + slg;
   return {
     avg: avg.toFixed(3), obp: obp.toFixed(3), slg: slg.toFixed(3), ops: ops.toFixed(3),
