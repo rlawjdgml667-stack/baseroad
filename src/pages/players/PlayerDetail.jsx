@@ -14,41 +14,6 @@ function ytId(url) {
 
 const CUR_YEAR = new Date().getFullYear();
 
-const PHYS_METRICS = [
-  ["sprint_60m", "60m 달리기", "초", true],
-  ["vertical_jump", "서전트 점프", "cm", false],
-  ["agility", "순발력(왕복달리기)", "초", true],
-  ["endurance", "지구력(1200m)", "초", true],
-];
-
-function PhysTrendChart({ records, field, unit, lowerIsBetter }) {
-  const pts = records.filter(r => r[field] !== undefined && r[field] !== "" && r[field] !== null)
-    .map(r => ({ date: r.date, value: Number(r[field]) }));
-  if (pts.length === 0) return null;
-
-  const w = 280, h = 80, pad = 8;
-  const values = pts.map(p => p.value);
-  const min = Math.min(...values), max = Math.max(...values);
-  const range = max - min || 1;
-  const stepX = pts.length > 1 ? (w - pad * 2) / (pts.length - 1) : 0;
-  const coords = pts.map((p, i) => ({
-    x: pad + i * stepX,
-    y: pad + (h - pad * 2) * (1 - (p.value - min) / range),
-  }));
-  const path = coords.map((c, i) => (i === 0 ? "M" : "L") + c.x + "," + c.y).join(" ");
-  const first = pts[0].value, last = pts[pts.length - 1].value;
-  const improved = lowerIsBetter ? last < first : last > first;
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20">
-      <path d={path} fill="none" stroke={pts.length > 1 ? (improved ? "#16a34a" : "#1e3a5f") : "#1e3a5f"} strokeWidth="2" />
-      {coords.map((c, i) => (
-        <circle key={i} cx={c.x} cy={c.y} r="3" fill="#1e3a5f" />
-      ))}
-    </svg>
-  );
-}
-
 export default function PlayerDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -122,8 +87,6 @@ export default function PlayerDetail() {
     ["도루", computed.sb], ["타수", computed.ab], ["안타", computed.h],
   ];
   const statEntries = isPitcher ? pitcherStats : batterStats;
-  const physRecords = Array.isArray(player.physical_records) ? player.physical_records : [];
-  const latestPhys = physRecords[physRecords.length - 1];
 
   return (
     <div className="space-y-4">
@@ -208,32 +171,6 @@ export default function PlayerDetail() {
       ) : (
         <div className="card p-6 text-center text-gray-400">
           <p className="text-sm">등록된 시즌 기록이 없습니다</p>
-        </div>
-      )}
-
-      {/* 신체능력 측정 */}
-      {physRecords.length > 0 && (
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="section-title mb-0">🏃 신체능력 측정</h2>
-            <span className="text-[10px] text-gray-400">최근 측정: {latestPhys.date}</span>
-          </div>
-          <p className="text-[10px] text-gray-400 mb-3">정기 측정 기록을 통해 성장 추이를 확인합니다</p>
-          <div className="grid grid-cols-2 gap-3">
-            {PHYS_METRICS.map(([field, label, unit, lowerIsBetter]) => {
-              const has = physRecords.some(r => r[field]);
-              if (!has) return null;
-              return (
-                <div key={field} className="bg-navy/5 rounded-xl p-3">
-                  <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-[11px] font-bold text-gray-600">{label}</span>
-                    <span className="text-sm font-extrabold text-navy">{latestPhys[field] ? `${latestPhys[field]}${unit}` : "-"}</span>
-                  </div>
-                  <PhysTrendChart records={physRecords} field={field} unit={unit} lowerIsBetter={lowerIsBetter} />
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase";
 import ImageUpload from "../../components/ui/ImageUpload";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
-import { Calculator, CheckCircle, Clock, Search, X, Link2, AlertCircle, RefreshCw, Activity, Trash2 } from "lucide-react";
+import { Calculator, CheckCircle, Clock, Search, X, Link2, AlertCircle, RefreshCw } from "lucide-react";
 
 const POSITIONS = ["투수","포수","내야수","외야수"];
 const HANDS = ["우투우타","우투좌타","좌투좌타","좌투우타","스위치"];
@@ -93,11 +93,6 @@ export default function PlayerDashboard() {
   const [computed, setComputed] = useState({});
   const [statSaving, setStatSaving] = useState(false);
 
-  // 신체능력 측정
-  const [physRecords, setPhysRecords] = useState([]);
-  const [newPhys, setNewPhys] = useState({ date:"", sprint_60m:"", vertical_jump:"", agility:"", endurance:"" });
-  const [physSaving, setPhysSaving] = useState(false);
-
   useEffect(() => {
     loadPlayerData();
   }, [user]);
@@ -107,7 +102,6 @@ export default function PlayerDashboard() {
     if (p) {
       setPlayerData(p);
       setForm(f => ({ ...f, ...p }));
-      setPhysRecords(Array.isArray(p.physical_records) ? p.physical_records : []);
       // 연결 요청 로드
       await loadConnectionStatus(p.id, p.school_id);
     }
@@ -286,33 +280,6 @@ export default function PlayerDashboard() {
     setStatSaving(false);
   }
 
-  // 신체능력 측정 기록 추가
-  async function addPhysRecord() {
-    if (!playerData) { toast.error("먼저 프로필을 저장해주세요"); return; }
-    if (!newPhys.date) { toast.error("측정 날짜를 입력해주세요"); return; }
-    if (!newPhys.sprint_60m && !newPhys.vertical_jump && !newPhys.agility && !newPhys.endurance) {
-      toast.error("최소 한 항목 이상 입력해주세요"); return;
-    }
-    setPhysSaving(true);
-    const record = { ...newPhys };
-    const updated = [...physRecords, record].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const { error } = await supabase.from("players").update({ physical_records: updated }).eq("id", playerData.id);
-    if (error) { toast.error("저장 실패: " + error.message); }
-    else {
-      setPhysRecords(updated);
-      setNewPhys({ date:"", sprint_60m:"", vertical_jump:"", agility:"", endurance:"" });
-      toast.success("측정 기록이 추가됐습니다");
-    }
-    setPhysSaving(false);
-  }
-
-  async function deletePhysRecord(idx) {
-    const updated = physRecords.filter((_, i) => i !== idx);
-    const { error } = await supabase.from("players").update({ physical_records: updated }).eq("id", playerData.id);
-    if (error) { toast.error("삭제 실패: " + error.message); }
-    else { setPhysRecords(updated); toast.success("삭제됐습니다"); }
-  }
-
   if (loading) return <LoadingSpinner />;
 
   const isPitcher = form.position === "투수";
@@ -325,7 +292,7 @@ export default function PlayerDashboard() {
       <h1 className="text-xl font-extrabold text-navy">선수 프로필 관리</h1>
 
       <div className="flex gap-2">
-        {[["profile","기본 정보"],["school","학교 연결"],["stats","시즌 기록"],["physical","신체능력 측정"]].map(([t,l]) => (
+        {[["profile","기본 정보"],["school","학교 연결"],["stats","시즌 기록"]].map(([t,l]) => (
           <button key={t} onClick={() => setTab(t)}
             className={"px-4 py-2 rounded-full text-sm font-bold border transition " + (tab===t ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>
             {l}
@@ -594,84 +561,6 @@ export default function PlayerDashboard() {
               <button onClick={saveSeason} disabled={statSaving} className="btn-primary w-full">
                 {statSaving ? "저장 중..." : season + "시즌 기록 저장"}
               </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ===== 신체능력 측정 탭 ===== */}
-      {tab === "physical" && (
-        <div className="space-y-4">
-          {!playerData && (
-            <div className="card p-6 text-center text-gray-400">
-              <p className="text-sm">먼저 기본 정보 탭에서 프로필을 저장해주세요</p>
-            </div>
-          )}
-
-          {playerData && (
-            <>
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
-                <p className="font-bold mb-0.5 flex items-center gap-1"><Activity size={13}/> 신체능력 측정 안내</p>
-                <p>단거리 기록, 서전트 점프, 순발력, 지구력을 주기적으로 측정해서 기록하면 성장 추이를 그래프로 확인할 수 있습니다.</p>
-              </div>
-
-              <div className="card p-4">
-                <h3 className="text-sm font-extrabold text-navy mb-3">측정 기록 추가</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="label text-[10px]">측정 날짜 *</label>
-                    <input className="input text-sm" type="date" value={newPhys.date} onChange={e => setNewPhys(s => ({ ...s, date: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="label text-[10px]">60m 달리기 (초)</label>
-                    <input className="input text-sm" type="number" step="0.01" placeholder="8.5" value={newPhys.sprint_60m} onChange={e => setNewPhys(s => ({ ...s, sprint_60m: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="label text-[10px]">서전트 점프 (cm)</label>
-                    <input className="input text-sm" type="number" placeholder="55" value={newPhys.vertical_jump} onChange={e => setNewPhys(s => ({ ...s, vertical_jump: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="label text-[10px]">순발력 - 왕복달리기 (초)</label>
-                    <input className="input text-sm" type="number" step="0.01" placeholder="18.2" value={newPhys.agility} onChange={e => setNewPhys(s => ({ ...s, agility: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="label text-[10px]">지구력 - 1200m (초)</label>
-                    <input className="input text-sm" type="number" placeholder="300" value={newPhys.endurance} onChange={e => setNewPhys(s => ({ ...s, endurance: e.target.value }))} />
-                  </div>
-                </div>
-                <button onClick={addPhysRecord} disabled={physSaving} className="btn-primary w-full mt-3">
-                  {physSaving ? "저장 중..." : "측정 기록 추가"}
-                </button>
-              </div>
-
-              <div className="card p-4">
-                <h3 className="text-sm font-extrabold text-navy mb-3">측정 기록 ({physRecords.length}건)</h3>
-                {physRecords.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-4">아직 측정 기록이 없습니다</p>
-                ) : (
-                  <div className="space-y-2">
-                    {[...physRecords].reverse().map((r, i) => {
-                      const idx = physRecords.length - 1 - i;
-                      return (
-                        <div key={idx} className="flex items-center gap-2 bg-navy/5 rounded-lg px-3 py-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-navy">{r.date}</div>
-                            <div className="text-[11px] text-gray-500 flex flex-wrap gap-2 mt-0.5">
-                              {r.sprint_60m && <span>60m {r.sprint_60m}초</span>}
-                              {r.vertical_jump && <span>점프 {r.vertical_jump}cm</span>}
-                              {r.agility && <span>순발력 {r.agility}초</span>}
-                              {r.endurance && <span>지구력 {r.endurance}초</span>}
-                            </div>
-                          </div>
-                          <button onClick={() => deletePhysRecord(idx)} className="text-gray-400 hover:text-red-500 transition flex-shrink-0">
-                            <Trash2 size={14}/>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </>
           )}
         </div>
