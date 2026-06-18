@@ -305,6 +305,10 @@ export default function CoachDashboard() {
             </div>
             <div className="mt-2"><label className="label">불펜 마운드 수</label><input className="input w-24" type="number" min={0} value={form.bullpen_count||0} onChange={e => set("bullpen_count",Number(e.target.value))} /></div>
           </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
+            ⚠️ <strong>허위 정보 등록 금지</strong> — 실제와 다른 학교 정보·코치·선수 이력을 입력할 경우 관리자가 해당 데이터를 삭제할 수 있습니다.
+          </div>
+
           <button onClick={saveSchool} disabled={saving||!form.name} className="btn-primary w-full">
             {saving ? "저장 중..." : school ? "학교 정보 저장" : "학교 등록"}
           </button>
