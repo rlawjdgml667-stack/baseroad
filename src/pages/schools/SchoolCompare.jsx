@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { X, Check, Minus } from "lucide-react";
 import toast from "react-hot-toast";
 
-const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
+const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
 const FACILITIES = [
   ["has_stadium","전용 야구장"],

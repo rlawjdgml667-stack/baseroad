@@ -80,7 +80,7 @@ export default function PlayerDetail() {
     </div>
   );
 
-  const levelLabel = { little:"리틀", elementary:"초등", middle:"중학", high:"고등", college:"대학" };
+  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
   const vid = ytId(player.highlight_url);
   const curSeason = seasons.find(s => s.season === selSeason);
   const computed = curSeason?.computed_stats || {};

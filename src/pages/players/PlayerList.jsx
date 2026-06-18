@@ -11,11 +11,11 @@ const GRADES = [
   { label:"전체", value:"전체" },
   { label:"리틀", value:"little" },
   { label:"초등", value:"elementary" },
-  { label:"중학", value:"middle" },
+  { label:"중등", value:"middle" },
   { label:"고등", value:"high" },
   { label:"대학", value:"college" },
 ];
-const LEVEL_LABEL = { little:"리틀", elementary:"초등", middle:"중학", high:"고등", college:"대학" };
+const LEVEL_LABEL = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
 const RANKING_CONFIGS = {
   "투수": [
