@@ -124,10 +124,10 @@ export default function CommunityDetail() {
   return (
     <div className="space-y-4 max-w-lg mx-auto">
       <div className="flex items-center gap-2">
-        <Link to="/community" className="text-navy/60 hover:text-navy">
+        <Link to={post.school_id ? `/schools/${post.school_id}` : "/community"} className="text-navy/60 hover:text-navy">
           <ChevronLeft size={20}/>
         </Link>
-        <h1 className="text-sm font-bold text-gray-400">커뮤니티</h1>
+        <h1 className="text-sm font-bold text-gray-400">{post.school_id ? "학교 게시판" : "커뮤니티"}</h1>
       </div>
 
       {/* 게시글 */}

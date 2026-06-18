@@ -30,6 +30,7 @@ export default function CommunityBoard() {
     let query = supabase
       .from("posts")
       .select("id, title, category, view_count, created_at, user_id")
+      .is("school_id", null)
       .order("created_at", { ascending: false });
     if (category !== "전체") query = query.eq("category", category);
     const { data } = await query;
