@@ -71,9 +71,9 @@ export default function Register() {
   if (done) return (
     <div className="max-w-sm mx-auto">
       <div className="card p-8 text-center space-y-4">
-        <div className="text-5xl">{role === "coach" ? "⏳" : "📧"}</div>
+        <div className="text-5xl">{role === "coach" ? "⏳" : "✅"}</div>
         <h2 className="text-xl font-extrabold text-navy">
-          {role === "coach" ? "가입 신청 완료!" : "이메일을 확인해주세요"}
+          {role === "coach" ? "가입 신청 완료!" : "가입이 완료됐습니다!"}
         </h2>
         {role === "coach" ? (
           <p className="text-sm text-gray-500">
@@ -81,16 +81,9 @@ export default function Register() {
             보통 1~2 영업일 내로 처리됩니다.
           </p>
         ) : (
-          <>
-            <p className="text-sm text-gray-500">
-              <span className="font-bold text-navy">{form.email}</span>로<br />
-              인증 메일을 보냈습니다.
-            </p>
-            <p className="text-xs text-gray-400">
-              이메일의 인증 링크를 클릭한 후 로그인해주세요.<br />
-              메일이 오지 않으면 스팸함을 확인해주세요.
-            </p>
-          </>
+          <p className="text-sm text-gray-500">
+            지금 바로 로그인하실 수 있습니다.
+          </p>
         )}
         <Link to="/login" className="btn-primary block text-center">로그인하러 가기</Link>
       </div>
@@ -137,7 +130,11 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div><label className="label">이름 *</label><input className="input" value={form.name} onChange={e => set("name",e.target.value)} required placeholder="홍길동" /></div>
-          <div><label className="label">이메일 *</label><input className="input" type="email" value={form.email} onChange={e => set("email",e.target.value)} required /></div>
+          <div>
+            <label className="label">이메일 *</label>
+            <input className="input" type="email" value={form.email} onChange={e => set("email",e.target.value)} required />
+            <p className="text-[10px] text-gray-400 mt-1">※ 비밀번호 찾기에 사용되므로 정확히 입력해주세요</p>
+          </div>
           <div><label className="label">비밀번호 *</label><input className="input" type="password" value={form.password} onChange={e => set("password",e.target.value)} required minLength={6} /></div>
           <div><label className="label">비밀번호 확인 *</label><input className="input" type="password" value={form.confirmPassword} onChange={e => set("confirmPassword",e.target.value)} required /></div>
 

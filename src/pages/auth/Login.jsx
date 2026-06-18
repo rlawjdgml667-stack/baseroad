@@ -5,7 +5,7 @@ import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
 
 export default function Login() {
-  const { signIn, signInWithKakao } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,8 +28,6 @@ export default function Login() {
       const msg = error.message;
       if (msg?.includes("Invalid login credentials") || msg?.includes("invalid_credentials")) {
         toast.error("이메일 또는 비밀번호가 틀렸습니다");
-      } else if (msg?.includes("Email not confirmed")) {
-        toast.error("이메일 인증이 필요합니다");
       } else if (msg?.includes("Too many requests")) {
         toast.error("잠시 후 다시 시도해주세요");
       } else {
@@ -61,10 +59,6 @@ export default function Login() {
             <Link to="/forgot-password" className="text-xs text-gray-400 hover:text-navy hover:underline">비밀번호를 잊으셨나요?</Link>
           </div>
         </form>
-        <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div><div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">또는</span></div></div>
-        <button onClick={signInWithKakao} className="w-full bg-[#FEE500] text-[#3C1E1E] font-bold py-2.5 rounded-lg hover:brightness-95 transition flex items-center justify-center gap-2">
-          <span className="text-lg">💬</span> 카카오로 로그인
-        </button>
         <p className="text-center text-sm text-gray-500">계정이 없으신가요? <Link to="/register" className="text-navy font-bold hover:underline">회원가입</Link></p>
       </div>
     </div>
