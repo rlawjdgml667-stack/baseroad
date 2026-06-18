@@ -23,7 +23,7 @@ export default function Login() {
       else if (role === "player") navigate("/dashboard/player");
       else if (role === "parent") navigate("/dashboard/parent");
       else if (role === "admin") navigate("/dashboard/admin");
-      else navigate("/");
+      else navigate("/schools");
     } catch (error) {
       const msg = error.message;
       if (msg?.includes("Invalid login credentials") || msg?.includes("invalid_credentials")) {

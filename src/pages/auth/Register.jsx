@@ -7,6 +7,7 @@ const ROLES = [
   { value:"parent", label:"학부모", desc:"자녀의 진학 학교를 찾는 학부모", icon:"👨‍👩‍👦" },
   { value:"player", label:"선수", desc:"야구 선수 본인 (프로필 등록)", icon:"⚾" },
   { value:"coach", label:"감독·코치", desc:"학교 야구부 감독 또는 코치 (관리자 승인 필요)", icon:"🏫" },
+  { value:"general", label:"일반 회원", desc:"야구 관계자, 스카우터, 일반 관심자", icon:"👤" },
 ];
 
 function getAge(birthYear) {

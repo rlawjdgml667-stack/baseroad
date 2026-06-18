@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function fetchProfile(userId) {
-    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
     setProfile(data);
     setLoading(false);
   }
@@ -52,19 +52,11 @@ export function AuthProvider({ children }) {
     return data;
   }
 
-  async function signInWithKakao() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "kakao",
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) throw error;
-  }
-
   async function signOut() {
     await supabase.auth.signOut();
   }
 
-  const value = { user, profile, loading, signUp, signIn, signInWithKakao, signOut, fetchProfile };
+  const value = { user, profile, loading, signUp, signIn, signOut, fetchProfile };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

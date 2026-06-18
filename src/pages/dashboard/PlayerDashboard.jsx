@@ -99,7 +99,7 @@ export default function PlayerDashboard() {
   }, [user]);
 
   async function loadPlayerData() {
-    const { data: p } = await supabase.from("players").select("*").eq("user_id", user.id).single();
+    const { data: p } = await supabase.from("players").select("*").eq("user_id", user.id).maybeSingle();
     if (p) {
       setPlayerData(p);
       setForm(f => ({ ...f, ...p }));
@@ -112,7 +112,7 @@ export default function PlayerDashboard() {
   async function loadConnectionStatus(playerId, currentSchoolId) {
     if (currentSchoolId) {
       // 현재 연결된 학교
-      const { data: school } = await supabase.from("schools").select("id,name,level").eq("id", currentSchoolId).single();
+      const { data: school } = await supabase.from("schools").select("id,name,level").eq("id", currentSchoolId).maybeSingle();
       setConnectedSchool(school || null);
     } else {
       // school_id가 없어도 승인된 요청이 있으면 자동 복구
