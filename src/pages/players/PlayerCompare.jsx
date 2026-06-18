@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
+import toast from "react-hot-toast";
 
 const posColor = {
   "투수": "bg-red-100 text-red-700",
@@ -40,6 +41,10 @@ export default function PlayerCompare() {
   // 선수 선택 시 시즌 기록 로드
   async function selectPlayer(player) {
     if (selectingSlot === null) return;
+    if (selected.some(s => s?.id === player.id)) {
+      toast.error("이미 선택된 선수입니다");
+      return;
+    }
     const newSelected = [...selected];
     newSelected[selectingSlot] = player;
     setSelected(newSelected);

@@ -60,7 +60,7 @@ export default function SchoolDetail() {
         setBoardLoading(false);
       });
     if (user) {
-      supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","school").eq("target_id", id).single()
+      supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","school").eq("target_id", id).maybeSingle()
         .then(({ data }) => setIsFav(!!data));
     }
   }, [id, user]);
@@ -92,7 +92,7 @@ if (loading) return <LoadingSpinner />;
   const facImgs = Array.isArray(school.facility_images) ? school.facility_images : [];
   const coaches = Array.isArray(school.coaches) ? school.coaches : [];
   const notablePlayers = Array.isArray(school.notable_players) ? school.notable_players : [];
-  const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
+  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
   return (
     <div className="space-y-4">

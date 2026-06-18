@@ -7,6 +7,7 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import toast from "react-hot-toast";
 
 const CAT_COLOR = {
+  공지: "bg-red-100 text-red-600",
   자유: "bg-gray-100 text-gray-600",
   질문: "bg-blue-100 text-blue-600",
   정보공유: "bg-green-100 text-green-700",

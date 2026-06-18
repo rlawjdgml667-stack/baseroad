@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
 import { X, Check, Minus } from "lucide-react";
+import toast from "react-hot-toast";
 
 const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
@@ -31,6 +32,10 @@ export default function SchoolCompare() {
 
   function selectSchool(school) {
     if (selectingSlot === null) return;
+    if (selected.some(s => s?.id === school.id)) {
+      toast.error("이미 선택된 학교입니다");
+      return;
+    }
     const newSelected = [...selected];
     newSelected[selectingSlot] = school;
     setSelected(newSelected);

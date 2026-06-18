@@ -23,6 +23,11 @@ export default function SchoolList() {
     });
   }, []);
 
+  useEffect(() => {
+    const r = searchParams.get("region");
+    if (r) setRegion(r);
+  }, [searchParams]);
+
   const filtered = schools.filter(s => {
     const sr = s.region || "";
     if (region !== "전체" && !sr.includes(region)) return false;

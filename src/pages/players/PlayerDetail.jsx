@@ -52,7 +52,7 @@ export default function PlayerDetail() {
       }
     });
     if (user) {
-      supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","player").eq("target_id", id).single()
+      supabase.from("favorites").select("id").eq("user_id", user.id).eq("target_type","player").eq("target_id", id).maybeSingle()
         .then(({ data }) => setIsFav(!!data));
     }
   }, [id, user]);

@@ -38,7 +38,7 @@ export default function CoachDashboard() {
 
   useEffect(() => {
     if (profile?.status === "pending") { setLoading(false); return; }
-    supabase.from("schools").select("*").eq("coach_user_id", user.id).single().then(({ data }) => {
+    supabase.from("schools").select("*").eq("coach_user_id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         setSchool(data);
         setForm(f => ({ ...f, ...data }));
@@ -50,7 +50,7 @@ export default function CoachDashboard() {
           setStats({ favorites: fav.count||0, players: pl.count||0 });
         });
         // 소속 선수 로드
-        supabase.from("players").select("id,name,position,profile_image_url,stats_verified").eq("school_id", data.id).eq("status","active").then(({ data: pd }) => setMyPlayers(pd||[]));
+        supabase.from("players").select("id,name,position,profile_image_url").eq("school_id", data.id).eq("status","active").then(({ data: pd }) => setMyPlayers(pd||[]));
         // 연결 요청 로드
         supabase.from("school_connection_requests")
           .select("*, players(id,name,position,birth_year,profile_image_url)")
@@ -84,7 +84,7 @@ export default function CoachDashboard() {
     await supabase.from("school_connection_requests").update({ status: "approved" }).eq("id", req.id);
     await supabase.from("players").update({ school_id: school.id }).eq("id", req.player_id);
     // 선수에게 알림
-    const { data: pl } = await supabase.from("players").select("user_id").eq("id", req.player_id).single();
+    const { data: pl } = await supabase.from("players").select("user_id").eq("id", req.player_id).maybeSingle();
     if (pl?.user_id) {
       await supabase.from("notifications").insert({
         user_id: pl.user_id,
@@ -102,7 +102,7 @@ export default function CoachDashboard() {
   async function rejectConnection(req) {
     await supabase.from("school_connection_requests").update({ status: "rejected" }).eq("id", req.id);
     // 선수에게 거절 알림
-    const { data: pl } = await supabase.from("players").select("user_id").eq("id", req.player_id).single();
+    const { data: pl } = await supabase.from("players").select("user_id").eq("id", req.player_id).maybeSingle();
     if (pl?.user_id) {
       await supabase.from("notifications").insert({
         user_id: pl.user_id,
@@ -137,7 +137,7 @@ export default function CoachDashboard() {
     setMyPlayers(prev => prev.map(p => p.id === selectedPlayer?.id ? { ...p, stats_verified: true } : p));
     // 선수에게 인증 알림
     if (selectedPlayer) {
-      const { data: pl } = await supabase.from("players").select("user_id,name").eq("id", selectedPlayer.id).single();
+      const { data: pl } = await supabase.from("players").select("user_id,name").eq("id", selectedPlayer.id).maybeSingle();
       if (pl?.user_id) {
         const ss = playerSeasons.find(s => s.id === seasonStatId);
         await supabase.from("notifications").insert({
@@ -399,7 +399,7 @@ export default function CoachDashboard() {
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400">소속 선수의 시즌 기록을 확인하고 인증해주세요.</p>
             <button onClick={async () => {
-              const { data: pd } = await supabase.from("players").select("id,name,position,profile_image_url,stats_verified").eq("school_id", school.id).eq("status","active");
+              const { data: pd } = await supabase.from("players").select("id,name,position,profile_image_url").eq("school_id", school?.id).eq("status","active");
               setMyPlayers(pd||[]);
               toast.success("새로고침됐습니다");
             }} className="text-xs text-navy font-bold flex items-center gap-1 hover:underline">

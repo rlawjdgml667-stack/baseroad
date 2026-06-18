@@ -16,7 +16,7 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await signIn(email, password);
-      const { data: profileData } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+      const { data: profileData } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
       const role = profileData?.role;
       toast.success("로그인됐습니다");
       if (role === "coach") navigate("/dashboard/coach");

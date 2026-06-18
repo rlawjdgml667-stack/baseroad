@@ -515,7 +515,7 @@ export default function PlayerDashboard() {
                   </span>
                 )}
                 <button onClick={async () => {
-                  const { data } = await supabase.from("player_season_stats").select("*").eq("player_id", playerData.id).eq("season", season).single();
+                  const { data } = await supabase.from("player_season_stats").select("*").eq("player_id", playerData.id).eq("season", season).maybeSingle();
                   if (data) { setSeasonStats(data); setRawStats(data.raw_stats||{}); setComputed(data.computed_stats||{}); }
                   toast.success("새로고침됐습니다");
                 }} className="ml-auto text-gray-400 hover:text-navy transition" title="인증 상태 새로고침">
