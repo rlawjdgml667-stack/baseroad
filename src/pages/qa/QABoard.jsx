@@ -155,7 +155,7 @@ export default function QABoard() {
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span className="font-medium text-gray-600">{post.profiles?.name||"익명"}</span>
-                {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}</span>}
+                {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}{post.profiles?.role === "parent" && <span className="text-gray-300 text-[9px] ml-0.5">(본인입력)</span>}</span>}
                 <span>·</span>
                 <span>{new Date(post.created_at).toLocaleDateString("ko")}</span>
                 <span className="ml-auto flex items-center gap-1">

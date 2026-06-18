@@ -142,7 +142,7 @@ export default function CommunityDetail() {
             {roleLabel[post.profiles?.role] || ""}
           </span>
           <span className="font-semibold text-gray-500">{post.profiles?.name || "익명"}</span>
-          {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}</span>}
+          {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}{post.profiles?.role === "parent" && <span className="text-gray-300 text-[9px] ml-0.5">(본인입력)</span>}</span>}
           <span>·</span>
           <span>{timeAgo(post.created_at)}</span>
           {(isOwner || isAdmin) && (
@@ -186,7 +186,7 @@ export default function CommunityDetail() {
                   {roleLabel[c.profiles?.role] || ""}
                 </span>
                 <span className="text-xs font-bold text-gray-700">{c.profiles?.name || "익명"}</span>
-                {c.profiles?.school_name && <span className="text-[10px] text-gray-400">· {c.profiles.school_name}</span>}
+                {c.profiles?.school_name && <span className="text-[10px] text-gray-400">· {c.profiles.school_name}{c.profiles?.role === "parent" && <span className="text-gray-300 text-[9px] ml-0.5">(본인입력)</span>}</span>}
                 <span className="text-[11px] text-gray-400">{timeAgo(c.created_at)}</span>
                 {(user?.id === c.user_id || isAdmin) && (
                   <button onClick={() => deleteComment(c.id)} className="ml-auto text-red-300 hover:text-red-500">

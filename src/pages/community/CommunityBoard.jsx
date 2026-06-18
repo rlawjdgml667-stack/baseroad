@@ -129,7 +129,7 @@ export default function CommunityBoard() {
                   {roleLabel[post.profiles?.role] || ""}
                 </span>
                 <span className="font-semibold text-gray-500">{post.profiles?.name || "익명"}</span>
-                {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}</span>}
+                {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}{post.profiles?.role === "parent" && <span className="text-gray-300 text-[9px] ml-0.5">(본인입력)</span>}</span>}
                 <span>·</span>
                 <span>{timeAgo(post.created_at)}</span>
                 <span className="ml-auto flex items-center gap-2">

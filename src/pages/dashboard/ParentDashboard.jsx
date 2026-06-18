@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { Heart, Check, Minus } from "lucide-react";
+import toast from "react-hot-toast";
 
 const FACILITIES = [
   ["has_stadium","전용 야구장"],["has_indoor","실내 연습장"],["has_weight","웨이트 시설"],
@@ -18,6 +19,8 @@ export default function ParentDashboard() {
   const [tab, setTab] = useState("schools");
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState([]);
+  const [childSchool, setChildSchool] = useState("");
+  const [schoolSaving, setSchoolSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -32,9 +35,19 @@ export default function ParentDashboard() {
       ]);
       setFavSchools(sRes.data||[]);
       setFavPlayers(pRes.data||[]);
+      // 자녀 소속 학교 로드
+      const { data: prof } = await supabase.from("profiles").select("school_name").eq("id", user.id).single();
+      if (prof?.school_name) setChildSchool(prof.school_name);
       setLoading(false);
     });
   }, [user]);
+
+  async function saveChildSchool() {
+    setSchoolSaving(true);
+    await supabase.from("profiles").update({ school_name: childSchool.trim() || null }).eq("id", user.id);
+    setSchoolSaving(false);
+    toast.success("저장됐습니다");
+  }
 
   function toggleCompare(id) {
     setCompareIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev);
@@ -53,6 +66,24 @@ export default function ParentDashboard() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-extrabold text-navy">학부모 대시보드</h1>
+
+      {/* 자녀 소속 학교 */}
+      <div className="card p-4 space-y-2">
+        <div className="text-sm font-extrabold text-navy">자녀 소속 학교</div>
+        <p className="text-xs text-gray-400">커뮤니티 글 작성 시 이름 옆에 표시됩니다.</p>
+        <div className="flex gap-2">
+          <input
+            className="input flex-1 text-sm"
+            placeholder="예: 서울중앙고등학교"
+            value={childSchool}
+            onChange={e => setChildSchool(e.target.value)}
+          />
+          <button onClick={saveChildSchool} disabled={schoolSaving} className="btn-primary text-sm px-4 flex-shrink-0">
+            {schoolSaving ? "저장 중..." : "저장"}
+          </button>
+        </div>
+        <p className="text-[10px] text-gray-400">※ 본인이 직접 입력한 정보입니다 (미인증)</p>
+      </div>
 
       <div className="grid grid-cols-2 gap-2 text-center">
         <div className="card p-3">
