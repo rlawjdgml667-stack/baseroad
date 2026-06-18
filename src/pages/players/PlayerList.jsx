@@ -254,6 +254,11 @@ export default function PlayerList() {
           <div className="rounded-xl px-4 py-3 text-sm font-bold" style={{ background: "#1a2744", color: "#c8901a" }}>
             {PHASE_BANNER[seasonPhase]}
           </div>
+
+          {/* 허위 정보 경고 */}
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
+            ⚠️ <strong>허위 기록 입력 금지</strong> — 실제와 다른 기록을 입력할 경우 관리자가 해당 데이터를 삭제할 수 있습니다.
+          </div>
           {/* 시즌 선택 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 flex-shrink-0">시즌</span>

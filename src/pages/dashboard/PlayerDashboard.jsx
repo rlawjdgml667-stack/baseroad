@@ -558,6 +558,10 @@ export default function PlayerDashboard() {
                 </div>
               )}
 
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
+                ⚠️ <strong>허위 기록 입력 금지</strong> — 실제와 다른 기록을 입력할 경우 관리자가 해당 데이터를 삭제할 수 있습니다.
+              </div>
+
               <button onClick={saveSeason} disabled={statSaving} className="btn-primary w-full">
                 {statSaving ? "저장 중..." : season + "시즌 기록 저장"}
               </button>
