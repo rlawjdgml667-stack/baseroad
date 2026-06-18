@@ -203,6 +203,9 @@ export default function CoachDashboard() {
       {tab === "school" && (
         <div className="card p-4 space-y-4">
           <h2 className="section-title">학교 정보 {school ? "수정" : "등록"}</h2>
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
+            ℹ️ 등록된 정보는 즉시 공개됩니다. 허위·부정확한 정보는 관리자에 의해 삭제될 수 있습니다.
+          </div>
           <div><label className="label">학교명 *</label><input className="input" value={form.name} onChange={e => set("name",e.target.value)} placeholder="○○중학교 야구부" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">지역</label><select className="input" value={form.region} onChange={e => set("region",e.target.value)}>{REGIONS.map(r => <option key={r}>{r}</option>)}</select></div>
