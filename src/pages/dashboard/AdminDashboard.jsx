@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 const LEVEL_LABEL = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 const POSITION_LIST = ["투수","포수","내야수","외야수"];
 const REGION_LIST = ["서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
-const ROLE_LABEL = { parent:"학부모", player:"선수", coach:"감독·코치", admin:"관리자" };
+const ROLE_LABEL = { parent:"학부모", player:"선수", coach:"감독·코치", admin:"관리자", general:"일반 회원" };
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
   if (loading) return <LoadingSpinner />;
 
   // 통계 계산
-  const roleCount = { parent:0, player:0, coach:0, admin:0 };
+  const roleCount = { parent:0, player:0, coach:0, admin:0, general:0 };
   allProfiles.forEach(p => { if (roleCount[p.role] !== undefined) roleCount[p.role]++; });
 
   const regionSchoolCount = REGION_LIST.map(r => ({
@@ -213,8 +213,8 @@ export default function AdminDashboard() {
           {/* 회원 유형별 */}
           <div className="card p-4">
             <h3 className="text-sm font-extrabold text-navy mb-3">👥 회원 유형별 현황</h3>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              {[["학부모",roleCount.parent,"bg-blue-100 text-blue-700"],["선수",roleCount.player,"bg-green-100 text-green-700"],["감독·코치",roleCount.coach,"bg-orange-100 text-orange-700"],["관리자",roleCount.admin,"bg-red-100 text-red-700"]].map(([label,count,cls]) => (
+            <div className="grid grid-cols-5 gap-2 text-center">
+              {[["학부모",roleCount.parent,"bg-blue-100 text-blue-700"],["선수",roleCount.player,"bg-green-100 text-green-700"],["감독·코치",roleCount.coach,"bg-orange-100 text-orange-700"],["관리자",roleCount.admin,"bg-red-100 text-red-700"],["일반 회원",roleCount.general,"bg-gray-100 text-gray-600"]].map(([label,count,cls]) => (
                 <div key={label} className={"rounded-xl p-3 "+cls}>
                   <div className="text-xl font-extrabold">{count}</div>
                   <div className="text-[10px] font-bold mt-0.5">{label}</div>
@@ -394,7 +394,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="text-xs text-gray-400 truncate">{m.email}</div>
                   </div>
-                  <span className={"text-[10px] font-bold px-2 py-1 rounded-full " + (m.role==="admin"?"bg-red-100 text-red-700":m.role==="coach"?"bg-orange-100 text-orange-700":m.role==="player"?"bg-green-100 text-green-700":"bg-blue-100 text-blue-700")}>
+                  <span className={"text-[10px] font-bold px-2 py-1 rounded-full " + (m.role==="admin"?"bg-red-100 text-red-700":m.role==="coach"?"bg-orange-100 text-orange-700":m.role==="player"?"bg-green-100 text-green-700":m.role==="general"?"bg-gray-100 text-gray-600":"bg-blue-100 text-blue-700")}>
                     {ROLE_LABEL[m.role]||m.role}
                   </span>
                 </div>
@@ -404,6 +404,7 @@ export default function AdminDashboard() {
                       <option value="parent">학부모</option>
                       <option value="player">선수</option>
                       <option value="coach">감독·코치</option>
+                      <option value="general">일반 회원</option>
                       <option value="admin">관리자</option>
                     </select>
                     <button onClick={() => toggleMemberStatus(m.id, m.status)}

@@ -84,12 +84,17 @@ export default function CommunityBoard() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold text-navy">커뮤니티 💬</h1>
-        {user && (
-          <button onClick={() => navigate("/community/write")}
-            className="flex items-center gap-1.5 bg-navy text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-navy/90 transition">
-            <PenSquare size={14}/> 글쓰기
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <Link to="/qa" className="text-xs text-gray-500 font-bold border border-gray-200 rounded-xl px-3 py-2 hover:bg-gray-50 transition">
+            Q&A ❓
+          </Link>
+          {user && (
+            <button onClick={() => navigate("/community/write")}
+              className="flex items-center gap-1.5 bg-navy text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-navy/90 transition">
+              <PenSquare size={14}/> 글쓰기
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 카테고리 필터 */}

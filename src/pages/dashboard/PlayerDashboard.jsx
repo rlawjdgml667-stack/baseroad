@@ -146,7 +146,7 @@ export default function PlayerDashboard() {
   useEffect(() => {
     if (!playerData) return;
     supabase.from("player_season_stats")
-      .select("*").eq("player_id", playerData.id).eq("season", season).single()
+      .select("*").eq("player_id", playerData.id).eq("season", season).maybeSingle()
       .then(({ data }) => {
         if (data) { setSeasonStats(data); setRawStats(data.raw_stats || {}); setComputed(data.computed_stats || {}); }
         else { setSeasonStats(null); setRawStats({}); setComputed({}); }

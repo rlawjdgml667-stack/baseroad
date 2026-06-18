@@ -113,12 +113,12 @@ export default function QABoard() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-extrabold text-navy">커뮤니티</h1>
+        <h1 className="text-xl font-extrabold text-navy">Q&A 게시판 ❓</h1>
         {user && (
           <button onClick={() => setModal(true)} className="btn-primary text-sm py-2 px-4">글 작성</button>
         )}
       </div>
-      <p className="text-xs text-gray-400">진학 정보, 훈련 팁, 장비 추천 등 야구 관련 이야기를 자유롭게 나눠보세요.</p>
+      <p className="text-xs text-gray-400">진학 상담, 훈련 방법, 장비 추천 등 궁금한 점을 질문하고 답변받아보세요.</p>
 
       {/* 카테고리 필터 */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">

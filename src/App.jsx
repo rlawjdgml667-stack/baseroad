@@ -24,6 +24,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
+import QABoard from "./pages/qa/QABoard";
 
 function ProtectedRoute({ children, roles }) {
   const { user, profile, loading } = useAuth();
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/dashboard/admin" element={
           <ProtectedRoute roles={["admin"]}><AdminDashboard /></ProtectedRoute>
         } />
+        <Route path="/qa" element={<QABoard />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<Navigate to="/" replace />} />
