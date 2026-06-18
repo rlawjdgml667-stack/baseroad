@@ -110,7 +110,7 @@ export default function Profile() {
     setSavingPw(true);
     const { error } = await supabase.auth.updateUser({ password: pwNew });
     setSavingPw(false);
-    if (error) { toast.error("비밀번호 변경 실패: " + error.message); return; }
+    if (error) { toast.error("비밀번호 변경에 실패했습니다. 다시 시도해주세요"); return; }
     toast.success("비밀번호가 변경됐습니다!");
     setShowPwForm(false);
     setPwCurrent(""); setPwNew(""); setPwConfirm("");

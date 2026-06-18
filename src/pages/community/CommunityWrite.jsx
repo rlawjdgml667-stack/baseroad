@@ -36,12 +36,13 @@ export default function CommunityWrite() {
       category,
     };
     if (schoolId) insertData.school_id = schoolId;
-    const { data, error } = await supabase.from("posts").insert(insertData).select("id").single();
+    const { data, error } = await supabase.from("posts").insert(insertData).select("id").maybeSingle();
     setSaving(false);
     if (error) { toast.error("작성 실패: " + error.message); return; }
     toast.success("게시글이 등록됐습니다!");
-    if (schoolId) navigate(-1);
-    else navigate("/community/" + data.id);
+    if (schoolId) navigate("/community");
+    else if (data?.id) navigate("/community/" + data.id);
+    else navigate("/community");
   }
 
   return (

@@ -55,7 +55,7 @@ export default function ParentDashboard() {
 
   if (loading) return <LoadingSpinner />;
 
-  const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
+  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
   const tabs = [
     ["schools","관심 학교 ("+favSchools.length+")"],
     ["players","관심 선수 ("+favPlayers.length+")"],
