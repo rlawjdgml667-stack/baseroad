@@ -13,7 +13,7 @@ export default function PlayerCard({ player }) {
   const statLabel = player.position === "투수" ? "최고구속" : "타율";
   const statValue = player.stats?.[statKey];
   const school = player.schools || {};
-  const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
+  const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
   const posCls = posColor[player.position] || "bg-gray-100 text-gray-600";
 
   useEffect(() => {

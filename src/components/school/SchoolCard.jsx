@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import FacilityBadge from "./FacilityBadge";
 
-const levelLabel = { elementary:"초등", middle:"중등", high:"고등", college:"대학" };
+const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
 export default function SchoolCard({ school }) {
   const { user } = useAuth();
