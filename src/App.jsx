@@ -21,6 +21,7 @@ import PlayerDashboard from "./pages/dashboard/PlayerDashboard";
 import ParentDashboard from "./pages/dashboard/ParentDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/community/write" element={<CommunityWrite />} />
         <Route path="/community/:id" element={<CommunityDetail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
         } />
