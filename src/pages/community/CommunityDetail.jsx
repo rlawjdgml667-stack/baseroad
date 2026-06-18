@@ -57,9 +57,9 @@ export default function CommunityDetail() {
 
     // join 실패시 fallback
     if (pe || !p) {
-      const { data: p2 } = await supabase.from("posts").select("*").eq("id", id).single();
+      const { data: p2 } = await supabase.from("posts").select("*").eq("id", id).maybeSingle();
       if (p2) {
-        const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", p2.user_id).single();
+        const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", p2.user_id).maybeSingle();
         setPost({ ...p2, profiles: prof });
       }
     } else {
@@ -69,7 +69,7 @@ export default function CommunityDetail() {
     // 댓글 profiles fallback
     const commentsWithProfiles = await Promise.all((c || []).map(async (cm) => {
       if (cm.profiles) return cm;
-      const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", cm.user_id).single();
+      const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", cm.user_id).maybeSingle();
       return { ...cm, profiles: prof };
     }));
     setComments(commentsWithProfiles);
@@ -84,10 +84,10 @@ export default function CommunityDetail() {
       post_id: id,
       user_id: user.id,
       content: commentText.trim(),
-    }).select("id, post_id, user_id, content, created_at").single();
+    }).select("id, post_id, user_id, content, created_at").maybeSingle();
     setSubmitting(false);
     if (error) { toast.error("댓글 작성 실패: " + error.message); return; }
-    const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", user.id).single();
+    const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", user.id).maybeSingle();
     setComments(prev => [...prev, { ...data, profiles: prof }]);
     setCommentText("");
   }

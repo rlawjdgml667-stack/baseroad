@@ -16,7 +16,11 @@ export default function ResetPassword() {
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      toast.error("변경 실패: " + error.message);
+      if (error.message?.includes("expired") || error.message?.includes("invalid")) {
+        toast.error("링크가 만료됐습니다. 비밀번호 찾기를 다시 시도해주세요");
+      } else {
+        toast.error("변경 실패. 다시 시도해주세요");
+      }
     } else {
       toast.success("비밀번호가 변경됐습니다");
       navigate("/");

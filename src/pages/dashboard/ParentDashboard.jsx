@@ -36,7 +36,7 @@ export default function ParentDashboard() {
       setFavSchools(sRes.data||[]);
       setFavPlayers(pRes.data||[]);
       // 자녀 소속 학교 로드
-      const { data: prof } = await supabase.from("profiles").select("school_name").eq("id", user.id).single();
+      const { data: prof } = await supabase.from("profiles").select("school_name").eq("id", user.id).maybeSingle();
       if (prof?.school_name) setChildSchool(prof.school_name);
       setLoading(false);
     });

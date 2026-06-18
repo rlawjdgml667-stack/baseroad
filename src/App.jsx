@@ -48,7 +48,7 @@ export default function App() {
         <Route path="/players/compare" element={<PlayerCompare />} />
         <Route path="/players/:id" element={<PlayerDetail />} />
         <Route path="/community" element={<CommunityBoard />} />
-        <Route path="/community/write" element={<CommunityWrite />} />
+        <Route path="/community/write" element={<ProtectedRoute><CommunityWrite /></ProtectedRoute>} />
         <Route path="/community/:id" element={<CommunityDetail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />

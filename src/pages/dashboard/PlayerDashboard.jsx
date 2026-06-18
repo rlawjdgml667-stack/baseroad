@@ -186,7 +186,7 @@ export default function PlayerDashboard() {
       const { error } = await supabase.from("players").update(payload).eq("id", playerData.id);
       if (error) toast.error(error.message); else toast.success("프로필이 저장됐습니다");
     } else {
-      const { data, error } = await supabase.from("players").insert(payload).select().single();
+      const { data, error } = await supabase.from("players").insert(payload).select().maybeSingle();
       if (error) toast.error(error.message);
       else { setPlayerData(data); toast.success("프로필이 등록됐습니다!"); }
     }
@@ -215,7 +215,7 @@ export default function PlayerDashboard() {
       setPlayerData(p => ({ ...p, school_name_text: school.name }));
 
       // 학교 감독에게 알림 전송
-      const { data: sch } = await supabase.from("schools").select("coach_user_id").eq("id", school.id).single();
+      const { data: sch } = await supabase.from("schools").select("coach_user_id").eq("id", school.id).maybeSingle();
       if (sch?.coach_user_id) {
         await supabase.from("notifications").insert({
           user_id: sch.coach_user_id,
@@ -269,7 +269,7 @@ export default function PlayerDashboard() {
     }
     // 소속 학교 감독에게 알림 전송
     if (playerData.school_id) {
-      const { data: sch } = await supabase.from("schools").select("coach_user_id,name").eq("id", playerData.school_id).single();
+      const { data: sch } = await supabase.from("schools").select("coach_user_id,name").eq("id", playerData.school_id).maybeSingle();
       if (sch?.coach_user_id) {
         await supabase.from("notifications").insert({
           user_id: sch.coach_user_id,

@@ -172,7 +172,7 @@ export default function QABoard() {
                 {post.title && (
                   <div className="px-4 py-3 bg-gray-50">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{post.question}</p>
-                    {user?.id === post.user_id && (
+                    {(user?.id === post.user_id || profile?.role === "admin") && (
                       <button onClick={() => deletePost(post.id)} className="text-xs text-red-400 font-bold mt-2 hover:text-red-600">삭제</button>
                     )}
                   </div>
