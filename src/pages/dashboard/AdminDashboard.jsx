@@ -91,21 +91,24 @@ export default function AdminDashboard() {
 
   async function deleteSchool(id) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
-    await supabase.from("schools").delete().eq("id",id);
+    const { error } = await supabase.from("schools").delete().eq("id",id);
+    if (error) { toast.error("삭제 실패"); return; }
     setSchools(prev => prev.filter(s => s.id !== id));
     toast.success("학교가 삭제됐습니다");
   }
 
   async function deletePlayer(id) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
-    await supabase.from("players").delete().eq("id",id);
+    const { error } = await supabase.from("players").delete().eq("id",id);
+    if (error) { toast.error("삭제 실패"); return; }
     setPlayers(prev => prev.filter(p => p.id !== id));
     toast.success("선수가 삭제됐습니다");
   }
 
   async function deletePost(id) {
     if (!confirm("게시글을 삭제하시겠습니까?")) return;
-    await supabase.from("posts").delete().eq("id", id);
+    const { error } = await supabase.from("posts").delete().eq("id", id);
+    if (error) { toast.error("삭제 실패"); return; }
     setPosts(prev => prev.filter(p => p.id !== id));
     toast.success("게시글이 삭제됐습니다");
   }

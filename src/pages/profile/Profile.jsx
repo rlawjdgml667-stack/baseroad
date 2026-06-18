@@ -41,8 +41,15 @@ export default function Profile() {
 
   async function loadMyPosts() {
     setPostsLoading(true);
-    const { data } = await supabase.from("posts").select("id,title,category,view_count,created_at").eq("user_id", user.id).order("created_at", { ascending: false });
-    setMyPosts(data || []);
+    const [{ data: communityPosts }, { data: qnaPosts }] = await Promise.all([
+      supabase.from("posts").select("id,title,category,view_count,created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("qna").select("id,title,category,created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+    ]);
+    const all = [
+      ...(communityPosts || []).map(p => ({ ...p, _type: "community" })),
+      ...(qnaPosts || []).map(p => ({ ...p, _type: "qna", view_count: 0 })),
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setMyPosts(all);
     setPostsLoading(false);
   }
 
@@ -365,8 +372,9 @@ export default function Profile() {
             </div>
           )}
           {myPosts.map(post => (
-            <Link key={post.id} to={"/community/"+post.id} className="card p-3 block hover:shadow-md transition">
+            <Link key={post._type+post.id} to={post._type === "qna" ? "/qa" : "/community/"+post.id} className="card p-3 block hover:shadow-md transition">
               <div className="flex items-center gap-2 mb-1">
+                {post._type === "qna" && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">Q&A</span>}
                 <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full " + (post.category === "공지" ? "bg-red-100 text-red-600" : post.category === "질문" ? "bg-blue-100 text-blue-600" : post.category === "정보공유" ? "bg-green-100 text-green-700" : post.category === "진학상담" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600")}>
                   {post.category}
                 </span>

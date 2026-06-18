@@ -15,7 +15,7 @@ export default function ForgotPassword() {
       redirectTo: window.location.origin + "/reset-password",
     });
     if (error) {
-      toast.error("전송 실패: " + error.message);
+      toast.error("전송 실패. 이메일 주소를 확인해주세요");
     } else {
       setSent(true);
     }

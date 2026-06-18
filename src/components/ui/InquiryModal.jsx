@@ -26,7 +26,7 @@ export default function InquiryModal({ onClose }) {
       content: form.content.trim(),
     });
     setSaving(false);
-    if (error) { toast.error("제출 실패: " + error.message); return; }
+    if (error) { toast.error("제출에 실패했습니다. 잠시 후 다시 시도해주세요"); return; }
     setDone(true);
   }
 
