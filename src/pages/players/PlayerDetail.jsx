@@ -71,6 +71,15 @@ export default function PlayerDetail() {
   if (loading) return <LoadingSpinner />;
   if (!player) return <div className="text-center py-20 text-gray-400">선수를 찾을 수 없습니다</div>;
 
+  if (!user && !player.is_public) return (
+    <div className="card p-10 text-center space-y-4">
+      <div className="text-5xl">🔒</div>
+      <h2 className="text-lg font-extrabold text-navy">비공개 프로필입니다</h2>
+      <p className="text-sm text-gray-500">이 선수의 프로필은 로그인한 사용자만 볼 수 있습니다.</p>
+      <Link to="/login" className="btn-primary inline-block px-6">로그인하러 가기</Link>
+    </div>
+  );
+
   const levelLabel = { little:"리틀", elementary:"초등", middle:"중학", high:"고등", college:"대학" };
   const vid = ytId(player.highlight_url);
   const curSeason = seasons.find(s => s.season === selSeason);

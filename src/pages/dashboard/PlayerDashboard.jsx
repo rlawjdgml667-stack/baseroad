@@ -75,7 +75,8 @@ export default function PlayerDashboard() {
   const [tab, setTab] = useState("profile");
   const [form, setForm] = useState({
     name:"", birth_year:"", position:"투수", dominant_hand:"우투우타",
-    intro:"", height:"", weight:"", highlight_url:"", profile_image_url:""
+    intro:"", height:"", weight:"", highlight_url:"", profile_image_url:"",
+    is_public: true,
   });
 
   // 학교 연결 관련
@@ -340,6 +341,20 @@ export default function PlayerDashboard() {
               <p className="text-amber-600 font-bold mt-1">⚠️ 본인이 직접 촬영한 영상만 업로드 가능합니다</p>
             </div>
           </div>
+          {/* 공개/비공개 설정 */}
+          <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+            <div>
+              <div className="text-sm font-bold text-navy">프로필 공개</div>
+              <div className="text-xs text-gray-400 mt-0.5">{form.is_public ? "누구나 내 프로필을 볼 수 있습니다" : "로그인한 사용자만 볼 수 있습니다"}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => set("is_public", !form.is_public)}
+              className={"relative w-12 h-6 rounded-full transition-colors " + (form.is_public ? "bg-navy" : "bg-gray-300")}>
+              <span className={"absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform " + (form.is_public ? "translate-x-6" : "translate-x-0.5")} />
+            </button>
+          </div>
+
           <button onClick={saveProfile} disabled={saving||!form.name} className="btn-primary w-full">
             {saving ? "저장 중..." : playerData ? "프로필 저장" : "프로필 등록"}
           </button>

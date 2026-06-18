@@ -79,7 +79,8 @@ export default function PlayerList() {
       const { data: playersData } = await supabase
         .from("players")
         .select("*, schools(name, region, level)")
-        .eq("status", "active");
+        .eq("status", "active")
+        .eq("is_public", true);
 
       if (!playersData || playersData.length === 0) {
         setPlayers([]);
