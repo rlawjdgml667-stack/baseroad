@@ -54,8 +54,8 @@ export default function CommunityBoard() {
     setLoading(false);
   }
 
-  const roleLabel = { player: "선수", parent: "학부모", coach: "감독", admin: "관리자" };
-  const roleBg = { player: "bg-green-100 text-green-700", parent: "bg-blue-100 text-blue-700", coach: "bg-orange-100 text-orange-700", admin: "bg-red-100 text-red-700" };
+  const roleLabel = { player: "선수", parent: "학부모", coach: "감독", admin: "관리자", general: "일반 회원" };
+  const roleBg = { player: "bg-green-100 text-green-700", parent: "bg-blue-100 text-blue-700", coach: "bg-orange-100 text-orange-700", admin: "bg-red-100 text-red-700", general: "bg-gray-100 text-gray-600" };
 
   function timeAgo(dateStr) {
     const diff = Date.now() - new Date(dateStr).getTime();

@@ -149,8 +149,8 @@ export default function Profile() {
     </div>
   );
 
-  const roleLabel = { admin:"관리자", coach:"감독·코치", player:"선수", parent:"학부모" };
-  const roleBg = { admin:"bg-red-100 text-red-700", coach:"bg-orange-100 text-orange-700", player:"bg-green-100 text-green-700", parent:"bg-blue-100 text-blue-700" };
+  const roleLabel = { admin:"관리자", coach:"감독·코치", player:"선수", parent:"학부모", general:"일반 회원" };
+  const roleBg = { admin:"bg-red-100 text-red-700", coach:"bg-orange-100 text-orange-700", player:"bg-green-100 text-green-700", parent:"bg-blue-100 text-blue-700", general:"bg-gray-100 text-gray-600" };
   const dashLink = { admin:"/dashboard/admin", coach:"/dashboard/coach", player:"/dashboard/player", parent:"/dashboard/parent" };
   const levelLabel = { little:"리틀", elementary:"초등", middle:"중등", high:"고등", college:"대학" };
 
