@@ -40,7 +40,7 @@ export default function CommunityWrite() {
     setSaving(false);
     if (error) { toast.error("작성 실패: " + error.message); return; }
     toast.success("게시글이 등록됐습니다!");
-    if (schoolId) navigate("/community");
+    if (schoolId) navigate("/schools/" + schoolId);
     else if (data?.id) navigate("/community/" + data.id);
     else navigate("/community");
   }
