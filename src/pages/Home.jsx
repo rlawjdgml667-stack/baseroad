@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import SchoolCard from "../components/school/SchoolCard";
 import PlayerCard from "../components/player/PlayerCard";
-import { Search } from "lucide-react";
+import { Search, ChevronRight } from "lucide-react";
 
 const REGION_LIST = ["서울","경기","인천","대전","세종","충남","충북","광주","전남","전북","대구","경북","부산","경남","울산","강원","제주"];
 
@@ -235,6 +235,101 @@ export default function Home() {
         <p className="text-center text-xs text-gray-400 mt-3">
           스카우트·관계자 분들도 선수 정보를 자유롭게 열람하실 수 있습니다
         </p>
+      </div>
+
+      {/* 이용 방법 */}
+      <HowToUse />
+    </div>
+  );
+}
+
+const HOW_TO = [
+  {
+    role: "학부모",
+    icon: "👨‍👩‍👦",
+    color: "bg-blue-50 border-blue-200",
+    accent: "text-blue-700",
+    badge: "bg-blue-100 text-blue-700",
+    link: "/register",
+    linkLabel: "학부모로 가입하기",
+    steps: [
+      { icon: "✍️", title: "회원가입", desc: "학부모로 가입합니다" },
+      { icon: "🏫", title: "자녀 학교 입력", desc: "대시보드에서 자녀 소속 학교를 직접 입력합니다" },
+      { icon: "🔍", title: "학교 검색 & 비교", desc: "전국 야구부 학교 시설·회비·감독 정보를 비교합니다" },
+      { icon: "💬", title: "커뮤니티 활동", desc: "다른 학부모·선수와 진학 정보를 교류합니다" },
+    ],
+  },
+  {
+    role: "선수",
+    icon: "⚾",
+    color: "bg-green-50 border-green-200",
+    accent: "text-green-700",
+    badge: "bg-green-100 text-green-700",
+    link: "/register",
+    linkLabel: "선수로 가입하기",
+    steps: [
+      { icon: "✍️", title: "회원가입", desc: "선수로 가입합니다" },
+      { icon: "📋", title: "프로필 등록", desc: "포지션·신체 정보·플레이 영상을 등록합니다" },
+      { icon: "🔗", title: "학교 연결 신청", desc: "소속 학교를 검색하여 연결을 신청합니다" },
+      { icon: "📊", title: "시즌 기록 입력", desc: "감독 인증을 받으면 랭킹에 등재됩니다" },
+    ],
+  },
+  {
+    role: "감독·코치",
+    icon: "🏫",
+    color: "bg-orange-50 border-orange-200",
+    accent: "text-orange-700",
+    badge: "bg-orange-100 text-orange-700",
+    link: "/register",
+    linkLabel: "감독·코치로 가입하기",
+    steps: [
+      { icon: "✍️", title: "회원가입 신청", desc: "감독·코치로 가입 신청합니다 (관리자 승인 필요)" },
+      { icon: "✅", title: "관리자 승인", desc: "승인 후 학교 정보 등록 권한이 부여됩니다" },
+      { icon: "🏫", title: "학교 정보 등록", desc: "시설·회비·훈련 방식 등 학교 정보를 등록합니다" },
+      { icon: "⚾", title: "선수 관리", desc: "연결 신청한 선수를 승인하고 기록을 인증합니다" },
+    ],
+  },
+];
+
+function HowToUse() {
+  const [active, setActive] = useState(0);
+  const item = HOW_TO[active];
+  return (
+    <div className="space-y-3">
+      <h2 className="section-title">이용 방법</h2>
+      {/* 역할 탭 */}
+      <div className="flex gap-2">
+        {HOW_TO.map((h, i) => (
+          <button key={h.role} onClick={() => setActive(i)}
+            className={"flex-1 py-2.5 rounded-xl text-xs font-extrabold border-2 transition " +
+              (active === i ? h.color + " " + h.accent + " border-current" : "bg-white text-gray-400 border-gray-200")}>
+            <span className="mr-1">{h.icon}</span>{h.role}
+          </button>
+        ))}
+      </div>
+
+      {/* 단계 */}
+      <div className={"rounded-2xl border p-4 space-y-3 " + item.color}>
+        {item.steps.map((s, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <div className={"w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0 mt-0.5 " + item.badge}>
+              {i + 1}
+            </div>
+            <div className="flex-1">
+              <div className={"text-sm font-extrabold " + item.accent}>
+                <span className="mr-1">{s.icon}</span>{s.title}
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
+            </div>
+            {i < item.steps.length - 1 && (
+              <ChevronRight size={14} className="text-gray-300 flex-shrink-0 mt-1"/>
+            )}
+          </div>
+        ))}
+        <Link to={item.link}
+          className={"block text-center text-xs font-extrabold py-2.5 rounded-xl mt-1 " + item.badge + " hover:opacity-80 transition"}>
+          {item.linkLabel} →
+        </Link>
       </div>
     </div>
   );
