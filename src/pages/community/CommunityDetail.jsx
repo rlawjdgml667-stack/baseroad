@@ -50,15 +50,15 @@ export default function CommunityDetail() {
     });
 
     const [{ data: p, error: pe }, { data: c }] = await Promise.all([
-      supabase.from("posts").select("*, profiles!posts_user_id_fkey(name, role)").eq("id", id).single(),
-      supabase.from("comments").select("*, profiles!comments_user_id_fkey(name, role)").eq("post_id", id).order("created_at", { ascending: true }),
+      supabase.from("posts").select("*, profiles!posts_user_id_fkey(name, role, school_name)").eq("id", id).single(),
+      supabase.from("comments").select("*, profiles!comments_user_id_fkey(name, role, school_name)").eq("post_id", id).order("created_at", { ascending: true }),
     ]);
 
     // join 실패시 fallback
     if (pe || !p) {
       const { data: p2 } = await supabase.from("posts").select("*").eq("id", id).single();
       if (p2) {
-        const { data: prof } = await supabase.from("profiles").select("name, role").eq("id", p2.user_id).single();
+        const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", p2.user_id).single();
         setPost({ ...p2, profiles: prof });
       }
     } else {
@@ -68,7 +68,7 @@ export default function CommunityDetail() {
     // 댓글 profiles fallback
     const commentsWithProfiles = await Promise.all((c || []).map(async (cm) => {
       if (cm.profiles) return cm;
-      const { data: prof } = await supabase.from("profiles").select("name, role").eq("id", cm.user_id).single();
+      const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", cm.user_id).single();
       return { ...cm, profiles: prof };
     }));
     setComments(commentsWithProfiles);
@@ -86,7 +86,7 @@ export default function CommunityDetail() {
     }).select("id, post_id, user_id, content, created_at").single();
     setSubmitting(false);
     if (error) { toast.error("댓글 작성 실패: " + error.message); return; }
-    const { data: prof } = await supabase.from("profiles").select("name, role").eq("id", user.id).single();
+    const { data: prof } = await supabase.from("profiles").select("name, role, school_name").eq("id", user.id).single();
     setComments(prev => [...prev, { ...data, profiles: prof }]);
     setCommentText("");
   }
@@ -142,6 +142,7 @@ export default function CommunityDetail() {
             {roleLabel[post.profiles?.role] || ""}
           </span>
           <span className="font-semibold text-gray-500">{post.profiles?.name || "익명"}</span>
+          {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}</span>}
           <span>·</span>
           <span>{timeAgo(post.created_at)}</span>
           {(isOwner || isAdmin) && (
@@ -185,6 +186,7 @@ export default function CommunityDetail() {
                   {roleLabel[c.profiles?.role] || ""}
                 </span>
                 <span className="text-xs font-bold text-gray-700">{c.profiles?.name || "익명"}</span>
+                {c.profiles?.school_name && <span className="text-[10px] text-gray-400">· {c.profiles.school_name}</span>}
                 <span className="text-[11px] text-gray-400">{timeAgo(c.created_at)}</span>
                 {(user?.id === c.user_id || isAdmin) && (
                   <button onClick={() => deleteComment(c.id)} className="ml-auto text-red-300 hover:text-red-500">

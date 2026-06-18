@@ -47,7 +47,7 @@ export default function CommunityBoard() {
     const userIds = [...new Set((data || []).map(p => p.user_id).filter(Boolean))];
     let profileMap = {};
     if (userIds.length > 0) {
-      const { data: profs } = await supabase.from("profiles").select("id, name, role").in("id", userIds);
+      const { data: profs } = await supabase.from("profiles").select("id, name, role, school_name").in("id", userIds);
       (profs || []).forEach(pr => { profileMap[pr.id] = pr; });
     }
     setPosts((data || []).map(p => ({ ...p, commentCount: commentCounts[p.id] || 0, profiles: profileMap[p.user_id] || null })));
@@ -129,6 +129,7 @@ export default function CommunityBoard() {
                   {roleLabel[post.profiles?.role] || ""}
                 </span>
                 <span className="font-semibold text-gray-500">{post.profiles?.name || "익명"}</span>
+                {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}</span>}
                 <span>·</span>
                 <span>{timeAgo(post.created_at)}</span>
                 <span className="ml-auto flex items-center gap-2">

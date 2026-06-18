@@ -32,7 +32,7 @@ export default function QABoard() {
   async function loadPosts() {
     const { data } = await supabase
       .from("qna")
-      .select("*, profiles(name)")
+      .select("*, profiles(name, role, school_name)")
       .order("created_at", { ascending: false });
     setPosts(data||[]);
     setLoading(false);
@@ -41,7 +41,7 @@ export default function QABoard() {
   async function loadReplies(postId) {
     const { data } = await supabase
       .from("qna_replies")
-      .select("*, profiles(name)")
+      .select("*, profiles(name, role, school_name)")
       .eq("qna_id", postId)
       .order("created_at", { ascending: true });
     setReplies(prev => ({ ...prev, [postId]: data||[] }));
@@ -155,6 +155,7 @@ export default function QABoard() {
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span className="font-medium text-gray-600">{post.profiles?.name||"익명"}</span>
+                {post.profiles?.school_name && <span className="text-gray-400">· {post.profiles.school_name}</span>}
                 <span>·</span>
                 <span>{new Date(post.created_at).toLocaleDateString("ko")}</span>
                 <span className="ml-auto flex items-center gap-1">

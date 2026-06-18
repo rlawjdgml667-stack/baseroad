@@ -211,6 +211,7 @@ export default function PlayerDashboard() {
 
       // school_name_text 업데이트
       await supabase.from("players").update({ school_name_text: school.name }).eq("id", playerData.id);
+      await supabase.from("profiles").update({ school_name: school.name }).eq("id", user.id);
       setPlayerData(p => ({ ...p, school_name_text: school.name }));
 
       // 학교 감독에게 알림 전송
@@ -247,6 +248,7 @@ export default function PlayerDashboard() {
   async function leaveSchool() {
     if (!window.confirm("소속 학교에서 나가시겠습니까? 시즌 기록은 유지됩니다.")) return;
     await supabase.from("players").update({ school_id: null, school_name_text: null }).eq("id", playerData.id);
+    await supabase.from("profiles").update({ school_name: null }).eq("id", user.id);
     setPlayerData(p => ({ ...p, school_id: null, school_name_text: null }));
     setConnectedSchool(null);
     toast.success("학교 소속이 해제됐습니다");
