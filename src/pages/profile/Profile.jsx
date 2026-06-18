@@ -105,7 +105,8 @@ export default function Profile() {
 
   async function saveName() {
     if (!nameInput.trim()) return;
-    await supabase.from("profiles").update({ name: nameInput.trim() }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ name: nameInput.trim() }).eq("id", user.id);
+    if (error) { toast.error("이름 변경 실패"); return; }
     await fetchProfile(user.id);
     setEditingName(false);
     toast.success("이름이 변경됐습니다!");

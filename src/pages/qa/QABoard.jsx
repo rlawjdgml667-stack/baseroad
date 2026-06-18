@@ -95,14 +95,16 @@ export default function QABoard() {
 
   async function deletePost(id) {
     if (!confirm("삭제하시겠습니까?")) return;
-    await supabase.from("qna").delete().eq("id", id);
+    const { error } = await supabase.from("qna").delete().eq("id", id);
+    if (error) { toast.error("삭제 실패"); return; }
     setPosts(prev => prev.filter(p => p.id !== id));
     if (expanded === id) setExpanded(null);
     toast.success("삭제됐습니다");
   }
 
   async function deleteReply(replyId, postId) {
-    await supabase.from("qna_replies").delete().eq("id", replyId);
+    const { error } = await supabase.from("qna_replies").delete().eq("id", replyId);
+    if (error) { toast.error("댓글 삭제 실패"); return; }
     loadReplies(postId);
   }
 

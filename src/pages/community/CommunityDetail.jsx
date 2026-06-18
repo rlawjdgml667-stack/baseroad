@@ -104,13 +104,15 @@ export default function CommunityDetail() {
 
   async function deletePost() {
     if (!confirm("게시글을 삭제하시겠습니까?")) return;
-    await supabase.from("posts").delete().eq("id", id);
+    const { error } = await supabase.from("posts").delete().eq("id", id);
+    if (error) { toast.error("삭제 실패"); return; }
     toast.success("삭제됐습니다");
-    navigate("/community");
+    navigate(post?.school_id ? `/schools/${post.school_id}` : "/community");
   }
 
   async function deleteComment(cid) {
-    await supabase.from("comments").delete().eq("id", cid);
+    const { error } = await supabase.from("comments").delete().eq("id", cid);
+    if (error) { toast.error("댓글 삭제 실패"); return; }
     setComments(prev => prev.filter(c => c.id !== cid));
     toast.success("댓글이 삭제됐습니다");
   }
