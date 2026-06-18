@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
-import { PenSquare, MessageCircle, Eye, ChevronRight } from "lucide-react";
+import { PenSquare, MessageCircle, Eye, ChevronRight, Search, X } from "lucide-react";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 
 const CATEGORIES = ["전체", "공지", "자유", "질문", "정보공유", "진학상담"];
@@ -20,6 +20,8 @@ export default function CommunityBoard() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("전체");
+  const [search, setSearch] = useState("");
+  const [myPostsOnly, setMyPostsOnly] = useState(false);
 
   useEffect(() => { loadPosts(); }, [category]);
 
@@ -53,6 +55,15 @@ export default function CommunityBoard() {
     setPosts((data || []).map(p => ({ ...p, commentCount: commentCounts[p.id] || 0, profiles: profileMap[p.user_id] || null })));
     setLoading(false);
   }
+
+  const filteredPosts = posts.filter(p => {
+    if (myPostsOnly && p.user_id !== user?.id) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      if (!p.title?.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
 
   const roleLabel = { player: "선수", parent: "학부모", coach: "감독", admin: "관리자", general: "일반 회원" };
   const roleBg = { player: "bg-green-100 text-green-700", parent: "bg-blue-100 text-blue-700", coach: "bg-orange-100 text-orange-700", admin: "bg-red-100 text-red-700", general: "bg-gray-100 text-gray-600" };
@@ -92,8 +103,34 @@ export default function CommunityBoard() {
         ))}
       </div>
 
+      {/* 검색 + 내 글 */}
+      <div className="flex gap-2 items-center">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none"/>
+          <input
+            className="input pl-8 pr-8 text-sm py-2"
+            placeholder="제목으로 검색..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+              <X size={13}/>
+            </button>
+          )}
+        </div>
+        {user && (
+          <button
+            onClick={() => setMyPostsOnly(v => !v)}
+            className={"flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition " +
+              (myPostsOnly ? "bg-navy text-white border-navy" : "bg-white text-gray-600 border-gray-200")}>
+            내 글
+          </button>
+        )}
+      </div>
+
       {/* 공지사항 고정 배너 */}
-      {!loading && posts.filter(p => p.category === "공지").length > 0 && (
+      {!loading && !myPostsOnly && !search && posts.filter(p => p.category === "공지").length > 0 && (
         <div className="space-y-1">
           {posts.filter(p => p.category === "공지").map(post => (
             <Link key={post.id} to={"/community/" + post.id}
@@ -106,15 +143,15 @@ export default function CommunityBoard() {
         </div>
       )}
 
-      {loading ? <LoadingSpinner /> : posts.filter(p => category === "전체" ? p.category !== "공지" : true).length === 0 ? (
+      {loading ? <LoadingSpinner /> : filteredPosts.filter(p => category === "전체" ? p.category !== "공지" : true).length === 0 ? (
         <div className="card p-12 text-center text-gray-400">
           <MessageCircle size={32} className="mx-auto mb-2 text-gray-200"/>
-          <p className="text-sm">아직 게시글이 없어요</p>
-          {user && <button onClick={() => navigate("/community/write")} className="mt-3 text-navy text-xs font-bold underline">첫 글 작성하기</button>}
+          <p className="text-sm">{search || myPostsOnly ? "검색 결과가 없어요" : "아직 게시글이 없어요"}</p>
+          {user && !search && !myPostsOnly && <button onClick={() => navigate("/community/write")} className="mt-3 text-navy text-xs font-bold underline">첫 글 작성하기</button>}
         </div>
       ) : (
         <div className="space-y-2">
-          {posts.filter(p => category === "전체" ? p.category !== "공지" : true).map(post => (
+          {filteredPosts.filter(p => category === "전체" ? p.category !== "공지" : true).map(post => (
             <Link key={post.id} to={"/community/" + post.id}
               className="card p-4 block hover:shadow-md transition">
               <div className="flex items-start gap-2 mb-2">
